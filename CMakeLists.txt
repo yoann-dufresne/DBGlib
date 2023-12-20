@@ -7,7 +7,7 @@ set(PROJECT_DESCRIPTION "dbglib")
 
 option(PORTABLE_BUILD "Generic x86_64 build" OFF)
 option(WITH_APP "Compile kmindex cli" ON)
-option(WITH_TESTS "Compile tests" OFF)
+option(WITH_TESTS "Compile tests" ON)
 option(STATIC_BUILD "Static build" OFF)
 
 if (NOT CMAKE_BUILD_TYPE)
@@ -48,6 +48,7 @@ target_link_libraries(asan_flags INTERFACE
 # add_subdirectory(thirdparty)
 add_subdirectory(lib)
 add_subdirectory(app)
+add_subdirectory(thirdparty)
 
 if (WITH_TESTS)
   enable_testing()
