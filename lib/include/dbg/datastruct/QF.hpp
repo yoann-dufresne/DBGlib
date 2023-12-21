@@ -4,6 +4,9 @@
 
 // typedef unsigned __int128 uint128_t;
 
+#include <iostream>
+using namespace std;
+
 
 template<uint64_t slot_size>
 struct RestBlock
@@ -14,11 +17,16 @@ struct RestBlock
 
 	uint64_t get(size_t index)
 	{
+		// cout << "get " << index << endl;
 		// Get the position of the value in bits
 		const auto first_bit_position { index * slot_size };
-		const auto first_uint_position { first_bit_position * slot_size };
+		const auto first_uint_position { first_bit_position / 64 };
 		const auto bits_in_uint { std::min((64UL - (first_bit_position % 64)), slot_size) };
-		const bool second_byte { bits_in_uint >= slot_size };
+		const bool second_byte { bits_in_uint < slot_size };
+
+		// cout << first_bit_position << " " << first_uint_position << endl;
+		// cout << first_bit_position << "/" << slot_size << " = " << first_uint_position << endl;
+		// cout << bits_in_uint << " " << second_byte << endl;
 
 		// Get the first uint
 		auto value { rests[first_uint_position] };
@@ -55,6 +63,7 @@ struct RestBlock
 		constexpr uint64_t mask { (1UL << slot_size) - 1UL };
 		value &= mask;
 
+		// cout << "/get" << endl;
 		return value;
 	};
 };
