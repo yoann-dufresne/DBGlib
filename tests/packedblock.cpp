@@ -1,6 +1,9 @@
 #include <gtest/gtest.h>
 #include <dbg/datastruct/PackedArray.hpp>
 
+// #include <iostream>
+// using namespace std;
+
 
 TEST(packedblock, packedblock_init)
 {
@@ -16,7 +19,7 @@ TEST(packedblock, packedblock_init)
 TEST(packedblock, packedblock_insert_1s)
 {
   PackedBlock<33> block {};
-  uint64_t ones = ( 1UL << 34 ) - 1;
+  uint64_t ones = ( 1UL << 33 ) - 1;
 
   // EXPECT_EQ(block.get(2), 0) << "block not initialized with 0 at index " << 2;
   for (size_t i=0 ; i<64 ; i++)
@@ -26,11 +29,12 @@ TEST(packedblock, packedblock_insert_1s)
     for (size_t j=0 ; j<64 ; j++)
     {
       if (i == j)
-        ASSERT_EQ(block.get(i), ones) << "1s not set at index " << i;
+        ASSERT_EQ(block.get(j), ones) << "1s not set at index " << j;
       else
-        EXPECT_EQ(block.get(i), 0) << "unexpected non-0 at index " << i;
+        ASSERT_EQ(block.get(j), 0) << "unexpected non-0 at index " << j;
     }
 
     block.set(i, 0);
+    ASSERT_EQ(block.get(i), 0) << "unexpected non-0 at index " << i;
   }
 }

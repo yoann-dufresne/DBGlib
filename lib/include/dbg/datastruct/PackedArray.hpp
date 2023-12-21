@@ -11,13 +11,13 @@
 template<uint64_t slot_size>
 struct PackedBlock
 {
-	std::array<uint64_t, slot_size> rests{};
+	std::array<uint64_t, slot_size> array{};
 	
 	PackedBlock(){};
 
 	/** Get the value at index (converted in uint64_t).
 	 **/
-	uint64_t get(size_t index)
+	uint64_t get(const size_t index) const
 	{
 		// cout << "get " << index << endl;
 		// Get the position of the value in bits
@@ -31,7 +31,7 @@ struct PackedBlock
 		// cout << bits_in_uint << " " << second_byte << endl;
 
 		// Get the first uint
-		auto value { rests[first_uint_position] };
+		auto value { array[first_uint_position] };
 
 		// Shift right if only one uint
 		if (not second_byte)
@@ -51,7 +51,7 @@ struct PackedBlock
 			value &= right_mask;
 
 			// Get the second uint
-			auto right_value { rests[first_uint_position+1] };
+			auto right_value { array[first_uint_position+1] };
 			// Shift right to align
 			right_value >>= 64UL - second_bits;
 			// Mask to remove the left bits
@@ -74,9 +74,8 @@ struct PackedBlock
 	 * @param index Where to insert
 	 * @param value Value to insert (slot_size lowest bits only)
 	 **/
-	void set(size_t index, uint64_t value)
+	void set(const size_t index, uint64_t value)
 	{
-		// cout << "set " << index << endl;
 		// Get the position of the value in bits
 		const auto first_bit_position { index * slot_size };
 		const auto first_uint_position { first_bit_position / 64 };
@@ -89,23 +88,39 @@ struct PackedBlock
 
 		if (not second_byte)
 		{
+			const auto empty_trailing_bits {64 - first_bit_position - slot_size};
 			// Align the value
+			value <<= empty_trailing_bits;
 			// Mask already present bits
+			uint64_t mask = first_bit_position == 0 ? ~0UL : (1UL << (empty_trailing_bits + slot_size)) - 1;
+			mask ^= (1UL << empty_trailing_bits) - 1;
+			mask = ~mask;
+			array[first_uint_position] &= mask;
 			// Insert the value
+			array[first_uint_position] |= value;
 		}
 		else
 		{
 			// --- first uint ---
 			// Right align the higher bits of the value
+			const auto right_shift {slot_size - bits_in_uint};
+			const uint64_t right_value {value >> right_shift};
 			// Mask the right bits of the first uint
+			const uint64_t right_mask {~((1UL << bits_in_uint) - 1)};
+			array[first_uint_position] &= right_mask;
 			// Insert the high bits
+			array[first_uint_position] |= right_value;
 
 			// --- second uint ---
+			const auto bits_in_second_uint {slot_size - bits_in_uint};
 			// Left align the lower bits of the value
+			const auto left_shift {64 - bits_in_second_uint};
+			const uint64_t left_value {value << left_shift};
 			// Mask the left bits of the second uint
+			const uint64_t left_mask { (1UL << (64 - bits_in_second_uint)) - 1 };
+			array[first_uint_position+1] &= left_mask;
 			// Insert the low bits
+			array[first_uint_position+1] |= left_value;
 		}
-
-		// cout << "/set" << endl;
 	};
 };
