@@ -1,7 +1,7 @@
-add_executable(qf-tests
-  "main.cpp"
-  "qf.cpp"
-)
+
+file(GLOB_RECURSE TEST_SOURCES "*.cpp")
+# add_library(${DBGLIB_LIB} ${DBGLIB_SOURCES})
+add_executable(qf-tests ${TEST_SOURCES})
 
 target_link_libraries(qf-tests PUBLIC gtest pthread dbglib)
 
