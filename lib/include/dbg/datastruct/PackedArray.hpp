@@ -2,19 +2,21 @@
 #include <algorithm>
 
 
-// typedef unsigned __int128 uint128_t;
-
-#include <iostream>
-using namespace std;
+// #include <iostream>
+// using namespace std;
 
 
+/** Contains a packed array of 64 values of size slot_size. This is a building block for packed hash tables, counting bloom filters and quotient filter.
+ **/
 template<uint64_t slot_size>
-struct RestBlock
+struct PackedBlock
 {
 	std::array<uint64_t, slot_size> rests{};
 	
-	RestBlock(){};
+	PackedBlock(){};
 
+	/** Get the value at index (converted in uint64_t).
+	 **/
 	uint64_t get(size_t index)
 	{
 		// cout << "get " << index << endl;
@@ -65,5 +67,45 @@ struct RestBlock
 
 		// cout << "/get" << endl;
 		return value;
+	};
+
+
+	/** Set the slot_size lower bits of the value to the index part of the array
+	 * @param index Where to insert
+	 * @param value Value to insert (slot_size lowest bits only)
+	 **/
+	void set(size_t index, uint64_t value)
+	{
+		// cout << "set " << index << endl;
+		// Get the position of the value in bits
+		const auto first_bit_position { index * slot_size };
+		const auto first_uint_position { first_bit_position / 64 };
+		const auto bits_in_uint { std::min((64UL - (first_bit_position % 64)), slot_size) };
+		const bool second_byte { bits_in_uint < slot_size };
+
+		// cout << first_bit_position << " " << first_uint_position << endl;
+		// cout << first_bit_position << "/" << slot_size << " = " << first_uint_position << endl;
+		// cout << bits_in_uint << " " << second_byte << endl;
+
+		if (not second_byte)
+		{
+			// Align the value
+			// Mask already present bits
+			// Insert the value
+		}
+		else
+		{
+			// --- first uint ---
+			// Right align the higher bits of the value
+			// Mask the right bits of the first uint
+			// Insert the high bits
+
+			// --- second uint ---
+			// Left align the lower bits of the value
+			// Mask the left bits of the second uint
+			// Insert the low bits
+		}
+
+		// cout << "/set" << endl;
 	};
 };
