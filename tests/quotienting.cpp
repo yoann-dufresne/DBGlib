@@ -23,3 +23,24 @@ TEST(quotientpair, quotientpair_overflow_init)
   ASSERT_EQ(qr.rest, 43);
 }
 
+
+TEST(quotienting, left_quotienting_init)
+{
+  uint64_t val = 0b100101111001;
+
+  auto qr {left_quotienting<6, 6>(val)};
+
+  ASSERT_EQ(qr.quotient, 0b100101);
+  ASSERT_EQ(qr.rest, 0b111001);
+}
+
+TEST(quotienting, right_quotienting_init)
+{
+  uint64_t val = 0b100101111001;
+
+  auto qr {right_quotienting<6, 6>(val)};
+
+  ASSERT_EQ(qr.rest, 0b100101);
+  ASSERT_EQ(qr.quotient, 0b111001);
+}
+
