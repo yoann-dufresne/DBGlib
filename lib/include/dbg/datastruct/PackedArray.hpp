@@ -5,6 +5,9 @@
 // #include <iostream>
 // using namespace std;
 
+#ifndef PACKED_ARRAY_H
+#define PACKED_ARRAY_H
+
 
 /** Contains a packed array of 64 values of size slot_size. This is a building block for packed hash tables, counting bloom filters and quotient filter.
  **/
@@ -124,3 +127,5 @@ struct PackedBlock
 		}
 	};
 };
+
+#endif
