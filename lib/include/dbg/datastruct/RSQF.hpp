@@ -10,7 +10,7 @@ class QuotientFilter
 {
 protected:
     static constexpr uint64_t num_blocks {1UL << (q - 7)};
-    std::array<PackedBlock, QuotientFilter::num_blocks> rests {};
+    std::array<PackedBlock<r>, QuotientFilter::num_blocks> rests {};
 public:
     QuotientFilter()
     {

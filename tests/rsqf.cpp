@@ -10,7 +10,7 @@ using namespace std;
 
 TEST(rsqf_monoblock, init)
 {
-  RSQF<6, 6, left_quotienting<6, 6> > rsqf {};
+  QuotientFilter<6, 6, left_quotienting<6, 6> > rsqf {};
   
   ASSERT_EQ(std::size(rsqf.rests), 1);
 }
