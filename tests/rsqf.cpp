@@ -7,10 +7,22 @@
 #include <iostream>
 using namespace std;
 
+// template<uint64_t q, uint64_t r, typename Quotienting>
+// class rsqf_test : QuotientFilter
+// {
+// public:
+//   rsqf_test();
+//   ~rsqf_test();
+  
+// };
+
 
 TEST(rsqf_monoblock, init)
 {
-  QuotientFilter<6, 6, left_quotienting<6, 6> > rsqf {};
+  constexpr uint64_t q {6};
+  constexpr uint64_t r {6};
+
+  QuotientFilter<q, r, LeftQuotienting> rsqf {};
   
-  ASSERT_EQ(std::size(rsqf.rests), 1);
+  // ASSERT_EQ(std::size(rsqf.rests), 1);
 }

@@ -13,16 +13,22 @@ struct QR
 };
 
 
-template<uint64_t q, uint64_t r>
-QR<q,r> left_quotienting(uint64_t value)
+struct LeftQuotienting
 {
-    return QR<q, r>(value >> r, value);
+    template<uint64_t q, uint64_t r>
+    QR<q,r> compute(uint64_t value)
+    {
+        return QR<q, r>(value >> r, value);
+    }
 };
 
-template<uint64_t q, uint64_t r>
-QR<q,r> right_quotienting(uint64_t value)
+struct RightQuotienting
 {
-    return QR<q, r>(value, value >> q);
+    template<uint64_t q, uint64_t r>
+    QR<q,r> compute(uint64_t value)
+    {
+        return QR<q, r>(value, value >> q);
+    }
 };
 
 #endif
