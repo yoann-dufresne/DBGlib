@@ -14,7 +14,7 @@
 template<uint64_t slot_size>
 struct PackedBlock
 {
-	std::array<uint64_t, slot_size> array{};
+	std::array<uint64_t, slot_size> m_array{};
 	
 	PackedBlock(){};
 
@@ -34,7 +34,7 @@ struct PackedBlock
 		// cout << bits_in_uint << " " << second_byte << endl;
 
 		// Get the first uint
-		auto value { array[first_uint_position] };
+		auto value { m_array[first_uint_position] };
 
 		// Shift right if only one uint
 		if (not second_byte)
@@ -54,7 +54,7 @@ struct PackedBlock
 			value &= right_mask;
 
 			// Get the second uint
-			auto right_value { array[first_uint_position+1] };
+			auto right_value { m_array[first_uint_position+1] };
 			// Shift right to align
 			right_value >>= 64UL - second_bits;
 			// Mask to remove the left bits
@@ -98,9 +98,9 @@ struct PackedBlock
 			uint64_t mask = first_bit_position == 0 ? ~0UL : (1UL << (empty_trailing_bits + slot_size)) - 1;
 			mask ^= (1UL << empty_trailing_bits) - 1;
 			mask = ~mask;
-			array[first_uint_position] &= mask;
+			m_array[first_uint_position] &= mask;
 			// Insert the value
-			array[first_uint_position] |= value;
+			m_array[first_uint_position] |= value;
 		}
 		else
 		{
@@ -110,9 +110,9 @@ struct PackedBlock
 			const uint64_t right_value {value >> right_shift};
 			// Mask the right bits of the first uint
 			const uint64_t right_mask {~((1UL << bits_in_uint) - 1)};
-			array[first_uint_position] &= right_mask;
+			m_array[first_uint_position] &= right_mask;
 			// Insert the high bits
-			array[first_uint_position] |= right_value;
+			m_array[first_uint_position] |= right_value;
 
 			// --- second uint ---
 			const auto bits_in_second_uint {slot_size - bits_in_uint};
@@ -121,9 +121,9 @@ struct PackedBlock
 			const uint64_t left_value {value << left_shift};
 			// Mask the left bits of the second uint
 			const uint64_t left_mask { (1UL << (64 - bits_in_second_uint)) - 1 };
-			array[first_uint_position+1] &= left_mask;
+			m_array[first_uint_position+1] &= left_mask;
 			// Insert the low bits
-			array[first_uint_position+1] |= left_value;
+			m_array[first_uint_position+1] |= left_value;
 		}
 	};
 };
