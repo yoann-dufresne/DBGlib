@@ -4,25 +4,18 @@
 #include <dbg/datastruct/quotienting.hpp>
 
 
-#include <iostream>
-using namespace std;
+static constexpr uint64_t q {6};
+static constexpr uint64_t r {6};
 
-// template<uint64_t q, uint64_t r, typename Quotienting>
-// class rsqf_test : QuotientFilter
-// {
-// public:
-//   rsqf_test();
-//   ~rsqf_test();
-  
-// };
+// class QuotientFilter<q, r, LeftQuotienting>;
 
-
-TEST(rsqf_monoblock, init)
+class QuotientFilterFixture : public QuotientFilter<q, r, LeftQuotienting>, public testing::Test
 {
-  constexpr uint64_t q {6};
-  constexpr uint64_t r {6};
 
-  QuotientFilter<q, r, LeftQuotienting> rsqf {};
-  
-  // ASSERT_EQ(std::size(rsqf.rests), 1);
+};
+
+
+TEST_F(QuotientFilterFixture, init)
+{
+  ASSERT_EQ(std::size(rests), 1);
 }
