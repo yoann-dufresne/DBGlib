@@ -19,6 +19,7 @@ target_compile_features(${DBGLIB_LIB} PUBLIC cxx_std_20)
 target_link_libraries(${DBGLIB_LIB} PUBLIC
   $<BUILD_INTERFACE:build_type_flags>
   $<BUILD_INTERFACE:warning_flags>
+  zlib pthread kseqpp
 )
 
 # add_dependencies(${KMINDEX_LIB} deps)

@@ -1,0 +1,3 @@
+[submodule "thirdparty/kseqpp"]
+	path = thirdparty/kseqpp
+	url = https://github.com/cartoonist/kseqpp.git
