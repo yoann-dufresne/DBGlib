@@ -16,10 +16,13 @@ static const std::string fa0 {"../tests/data/fasta0.fa"};
 
 TEST(Kmerator, init)
 {
-    FileKmerator<5, uint64_t> kmerator {fa0};
+    using kuint = uint64_t;
 
-    for (auto& kmer : kmerator)
-        cout << kmer.value << endl;
+    km::KmerManipulator<kuint> manip {5};
+    km::FileKmerator<kuint> kmerator {fa0, manip};
+
+    for (km::Kmer<kuint> kmer : kmerator)
+        cout << kmer.m_value << endl;
  
     EXPECT_EQ(0, 2);
 }

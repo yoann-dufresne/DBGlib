@@ -12,51 +12,90 @@
 using namespace std;
 
 
-template <uint64_t k, typename kuint>
+namespace km
+{
+
+
+template <typename kuint>
 class FileKmerator
 {
 protected:
     const std::string& m_filename;
-    // klibpp::SeqStreamIn& m_stream;
-    // klibpp::KSeq record {};
-    // uint64_t seq_idx;
+    KmerManipulator<kuint>& m_manip;
+    Kmer<kuint> m_current_kmer;
+
 public:
-    FileKmerator(const std::string& filename) : m_filename(filename)
-    {
-        static_assert((k+3) / 4 < sizeof(kuint));
-    };
+    FileKmerator(const std::string& filename, KmerManipulator<kuint>& manipulator)
+        : m_filename(filename), m_manip(manipulator)
+    {};
 
     struct Iterator
     {
     protected:
         // Construct an iterator without control on the file stream
-        Iterator(const std::string& filename, std::unique_ptr<klibpp::SeqStreamIn> stream_ptr)
-            : m_filename(filename) , m_ptr(std::move(stream_ptr)), m_current_kmer(42)
-        {}
-        // Construct a new file stream from the filename
-        Iterator(const std::string& filename)
-            : m_filename(filename)
-            , m_ptr( std::make_unique<klibpp::SeqStreamIn>(filename.c_str()) )
-            , m_current_kmer(42)
+        Iterator(FileKmerator& kmerator, std::unique_ptr<klibpp::SeqStreamIn> stream_ptr)
+            : m_rator(kmerator), m_manip(kmerator.m_manip), m_ptr(std::move(stream_ptr))
+            , m_record(), m_remaining_kmers(0), m_seq_idx(0)
         {
-            klibpp::KSeq record;
+            this->init_record();
 
-            // cout << "eof " << m_ptr->eof() << endl;
-            // cout << "fail " << m_ptr->fail() << endl;
+            const kuint nucl {(m_record.seq[m_seq_idx] >> 1) & 0b11U};
+            m_rator.m_current_kmer = m_manip.add_nucleotide(nucl);
 
-            while ((*m_ptr) >> record)
+            m_remaining_kmers -= 1;
+            m_seq_idx += 1;
+        }
+        // Construct a new file stream from the filename
+        Iterator(FileKmerator& kmerator)
+            : Iterator ( kmerator, std::make_unique<klibpp::SeqStreamIn>(kmerator.m_filename.c_str()) )
+        {}
+
+        void init_record()
+        {
+            if (m_ptr == nullptr)
+                return;
+
+            do
             {
-                std::cout << record.name << std::endl;
-                std::cout << record.seq << std::endl;
+                if ((*m_ptr) >> m_record)
+                {
+                    // If sequence is too short, skip it
+                    if (m_record.seq.length() < m_rator.m_manip.k) {
+                        continue;
+                    }
+
+                    // Init the first kmer
+                    m_manip.init_kmer();
+                    for (m_seq_idx = 0 ; m_seq_idx<m_manip.k-1 ; m_seq_idx++)
+                    {
+                        // Nucl encoding. TODO: Move encoding to dedicated classes
+                        const kuint nucl {(m_record.seq[m_seq_idx] >> 1) & 0b11U};
+                        m_manip.add_nucleotide(nucl);
+                    }
+
+                    std::cout << m_record.name << std::endl;
+                    std::cout << m_record.seq << std::endl;
+                    m_remaining_kmers = m_record.seq.length() - m_manip.k + 1;
+
+                }
+                else
+                {
+                    // No more sequence to read from the file
+                    m_ptr = nullptr;
+                    return;
+                }
             }
+            while (m_record.seq.length() < m_manip.k);
         }
 
         friend class FileKmerator;
 
     public:
-        Kmer<kuint>& operator*()
+        // Return kmer by value
+        Kmer<kuint> operator*() const
         {
-            return m_current_kmer;
+            cout << m_manip << endl;
+            return m_rator.m_current_kmer;
         }
 
         Iterator& operator++()
@@ -66,36 +105,43 @@ public:
                 return *this;
 
             // Go to next sequence
-            klibpp::KSeq record{};
-            if ((*m_ptr) >> record)
+            if (m_remaining_kmers == 0)
             {
-                std::cout << record.name << std::endl;
-                std::cout << record.seq << std::endl;
+                this->init_record();
             }
-            else
-            {
-                // Invalidate the stream after reaching eof
-                m_ptr = nullptr;
-            }
+
+            // Get the next kmer
+            const kuint nucl {(m_record.seq[m_seq_idx] >> 1) & 0b11U};
+            m_rator.m_current_kmer = m_manip.add_nucleotide(nucl);
+
+            m_remaining_kmers -= 1;
+            m_seq_idx += 1;
 
             return *this;
         }
 
         bool operator==(const Iterator& it) const
         {
-            return m_filename == it.m_filename and m_ptr == it.m_ptr;
+            return m_rator.m_filename == it.m_rator.m_filename and m_ptr == it.m_ptr;
         }
 
 
     private:
-        const std::string& m_filename;
+        FileKmerator<kuint>& m_rator;
+        KmerManipulator<kuint>& m_manip;
         std::unique_ptr<klibpp::SeqStreamIn> m_ptr;
-        Kmer<kuint> m_current_kmer;
+
+        klibpp::KSeq m_record;
+        uint64_t m_remaining_kmers;
+        uint64_t m_seq_idx;
     };
     
 
-    Iterator begin() { return Iterator(m_filename); }
-    Iterator end() { return Iterator(m_filename, nullptr); }
+    Iterator begin() { return Iterator(*this); }
+    Iterator end() { return Iterator(*this, nullptr); }
+};
+
+
 };
 
 
