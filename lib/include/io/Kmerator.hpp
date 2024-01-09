@@ -42,7 +42,6 @@ public:
 
             this->init_record();
 
-            cout << "add " << m_record.seq[m_seq_idx] << " (" << m_seq_idx << ")" << endl;
             const kuint nucl {(m_record.seq[m_seq_idx] >> 1) & 0b11U};
             m_rator.m_current_kmer = m_manip.add_nucleotide(nucl);
 
@@ -74,9 +73,6 @@ public:
                         m_manip.add_nucleotide(nucl);
                     }
 
-                    std::cout << m_record.name << std::endl;
-                    std::cout << m_record.seq << std::endl;
-                    cout << m_seq_idx << endl;
                     m_remaining_kmers = m_record.seq.length() - m_manip.k + 1;
 
                 }
@@ -96,7 +92,6 @@ public:
         // Return kmer by value
         Kmer<kuint> operator*() const
         {
-            cout << m_manip << endl;
             return m_rator.m_current_kmer;
         }
 

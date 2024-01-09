@@ -21,8 +21,9 @@ TEST(Kmerator, init)
     km::KmerManipulator<kuint> manip {5};
     km::FileKmerator<kuint> kmerator {fa0, manip};
 
+    uint64_t nb_kmer {0};
     for (km::Kmer<kuint> kmer : kmerator)
-        cout << kmer.m_value << endl;
+        nb_kmer += 1;
  
-    EXPECT_EQ(0, 2);
+    EXPECT_EQ(nb_kmer, 24);
 }
