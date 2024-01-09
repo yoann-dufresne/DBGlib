@@ -35,10 +35,14 @@ public:
         // Construct an iterator without control on the file stream
         Iterator(FileKmerator& kmerator, std::unique_ptr<klibpp::SeqStreamIn> stream_ptr)
             : m_rator(kmerator), m_manip(kmerator.m_manip), m_ptr(std::move(stream_ptr))
-            , m_record(), m_remaining_kmers(0), m_seq_idx(0)
+            , m_remaining_kmers(0), m_seq_idx(0)
         {
+            if (m_ptr == nullptr)
+                return;
+
             this->init_record();
 
+            cout << "add " << m_record.seq[m_seq_idx] << " (" << m_seq_idx << ")" << endl;
             const kuint nucl {(m_record.seq[m_seq_idx] >> 1) & 0b11U};
             m_rator.m_current_kmer = m_manip.add_nucleotide(nucl);
 
@@ -52,9 +56,6 @@ public:
 
         void init_record()
         {
-            if (m_ptr == nullptr)
-                return;
-
             do
             {
                 if ((*m_ptr) >> m_record)
@@ -75,6 +76,7 @@ public:
 
                     std::cout << m_record.name << std::endl;
                     std::cout << m_record.seq << std::endl;
+                    cout << m_seq_idx << endl;
                     m_remaining_kmers = m_record.seq.length() - m_manip.k + 1;
 
                 }
