@@ -18,6 +18,10 @@ class Skmer
 {
 
 public:
+    template<typename I>
+    struct pair;
+
+
     Skmer() : m_pair()
     {}
     Skmer(const pair<kuint>& value) : m_pair(value)
@@ -54,6 +58,8 @@ public:
         pair(const pair<I>& other) : m_value(other.m_value)
         {}
 
+        static const pair<I> max {static_cast<I>(~static_cast<I>(0)), static_cast<I>(~static_cast<I>(0))};
+
         pair<I>& operator= (const pair<I>& other)
         {
             m_value[0] = other.m_value[0];
@@ -71,7 +77,7 @@ public:
         bool operator==(const pair<I>& other) const
         { return m_value[0] == other.m_value[0] and m_value[1] == other.m_value[1]; }
 
-        pair<I>& operator~ ()
+        pair<I>& operator~ () const
         {
             return pair(~m_value[0], ~m_value[1]);
         }
@@ -126,30 +132,32 @@ public:
         }
     };
 
-    using kuintpair = Skmer::pair<kuint>;
-
-    kuintpair m_pair;
+    pair<kuint> m_pair;
 };
+
 
 
 template<typename kuint>
 class SkmerManipulator
 {
 public:
+    using kpair = typename km::Skmer<kuint>::pair<kuint>;
+
     const uint64_t k;
     const uint64_t m;
     const uint64_t sk_size;
-protected:
-    m_suff_size;
-    m_pref_size;
-
+    
     Skmer<kuint> m_fwd;
     Skmer<kuint> m_rev;
-    
-    kuintpair m_suffix_buff;
-    kuintpair m_prefix_buff;
 
-    const kuintpair m_mask;
+protected:
+    uint64_t m_suff_size;
+    uint64_t m_pref_size;
+
+    kpair m_suffix_buff;
+    kpair m_prefix_buff;
+
+    const kpair m_mask;
 
     // // The amount of bit shifts needed to reach the 4 most significant bits of a kuint
     // static constexpr uint64_t uints_middle_shift {sizeof(kuint) * 8 - 4};
@@ -161,7 +169,7 @@ public:
         assert((k*2-m+3) / 4 < 2*sizeof(kuint));
         
         // mask creation
-        m_mask = ~kuintpair{};
+        m_mask = Skmer<kuint>::pair<kuint>::max;
         m_mask >>= 2 * sizeof(kuint) * 8 - 2 * sk_size;
 
         // Skmer and skmer buffers init
@@ -191,14 +199,14 @@ public:
 
         // --- suffix ---
         // Shift the suffix
-        m_suff_buff <<= 4;
+        m_suffix_buff <<= 4;
         // Add the new nucleotide
-        m_suff_buff |= nucl;
+        m_suffix_buff |= nucl;
         // Remove the transfered nucleotide
-        m_suff_buff &= m_mask;
+        m_suffix_buff &= m_mask;
 
         // Merge the interleaved halves
-        m_fwd = m_prefix_buff | m_suff_buff;
+        m_fwd = m_prefix_buff | m_suffix_buff;
 
         return m_fwd;
     }
@@ -208,27 +216,27 @@ public:
 };
 
 
-// template<typename T>
-// std::ostream& operator<<(std::ostream& os, SkmerManipulator<T>& manip)
-// {
-//     static const char nucleotides[] = {'A', 'C', 'T', 'G'};
-//     os << '[';
+template<typename T>
+std::ostream& operator<<(std::ostream& os, SkmerManipulator<T>& manip)
+{
+    static const char nucleotides[] = {'A', 'C', 'T', 'G'};
+    os << '[';
 
-//     // Forward
-//     for (uint64_t idx{0} ; idx<manip.k ; idx++)
-//         os << nucleotides[(manip.m_fwd.m_value >> (2 * idx)) & 0b11U];
-//     os << '(' << manip.m_fwd.m_value << ") / ";
+    // Forward
+    for (uint64_t idx{0} ; idx<manip.k ; idx++)
+        os << nucleotides[(manip.m_fwd.m_value >> (2 * idx)) & 0b11U];
+    os << '(' << manip.m_fwd.m_value << ") / ";
 
-//     // Reverse
-//     for (uint64_t idx{0} ; idx<manip.k ; idx++)
-//         os << nucleotides[(manip.m_rev.m_value >> (2 * idx)) & 0b11U];
-//     os << '('  << manip.m_rev.m_value << ")]";
+    // Reverse
+    for (uint64_t idx{0} ; idx<manip.k ; idx++)
+        os << nucleotides[(manip.m_rev.m_value >> (2 * idx)) & 0b11U];
+    os << '('  << manip.m_rev.m_value << ")]";
 
-//     return os;
-// }
-
-
+    return os;
 }
+
+
+};
 
 
 #endif
