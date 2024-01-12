@@ -27,8 +27,11 @@ public:
     Skmer(Skmer&& other) : m_pair(other.m_pair)
     {}
 
-    Skmer<kuint>& operator= (Skmer<kuint>& other)
+    Skmer<kuint>& operator= (const Skmer<kuint>& other)
     { m_pair = other.m_pair; return *this; }
+
+    Skmer<kuint>& operator= (const pair<kuint>& value)
+    { m_pair = value; return *this; }
 
     Skmer<kuint>& operator= (Skmer<kuint>&& other)
     { m_pair = other.m_pair; return *this; }
@@ -115,6 +118,12 @@ public:
             m_value[1] |= other.m_value[1];
             return *this;
         }
+
+        pair<I>& operator|= (const I& value)
+        {
+            m_value[0] |= value;
+            return *this;
+        }
     };
 
     using kuintpair = Skmer::pair<kuint>;
@@ -146,7 +155,7 @@ protected:
     // static constexpr uint64_t uints_middle_shift {sizeof(kuint) * 8 - 4};
 
 public:
-    KmerManipulator(const uint64_t k, const uint64_t m) 
+    SkmerManipulator(const uint64_t k, const uint64_t m) 
         : k(k), m(m), sk_size(2*k-m), m_suff_size(sk_size / 2), m_pref_size((sk_size+1) / 2)
     {
         assert((k*2-m+3) / 4 < 2*sizeof(kuint));
@@ -170,7 +179,7 @@ public:
         m_rev = Skmer<kuint>{};
     }
 
-    inline Skmer<kuint> add_nucleotide(const kuint nucl)
+    inline Skmer<kuint>& add_nucleotide(const kuint nucl)
     {
         // --- prefix ---
         // Shift prefix to the right
@@ -184,37 +193,39 @@ public:
         // Shift the suffix
         m_suff_buff <<= 4;
         // Add the new nucleotide
-        m_suff_size |= nucl;
+        m_suff_buff |= nucl;
         // Remove the transfered nucleotide
-        m_suff_size &= m_mask;
+        m_suff_buff &= m_mask;
 
         // Merge the interleaved halves
-        // TODO
+        m_fwd = m_prefix_buff | m_suff_buff;
+
+        return m_fwd;
     }
 
-    template<typename T>
-    friend std::ostream& operator<<(std::ostream& os, SkmerManipulator<T>& manip);
+    // template<typename T>
+    // friend std::ostream& operator<<(std::ostream& os, SkmerManipulator<T>& manip);
 };
 
 
-template<typename T>
-std::ostream& operator<<(std::ostream& os, SkmerManipulator<T>& manip)
-{
-    static const char nucleotides[] = {'A', 'C', 'T', 'G'};
-    os << '[';
+// template<typename T>
+// std::ostream& operator<<(std::ostream& os, SkmerManipulator<T>& manip)
+// {
+//     static const char nucleotides[] = {'A', 'C', 'T', 'G'};
+//     os << '[';
 
-    // Forward
-    for (uint64_t idx{0} ; idx<manip.k ; idx++)
-        os << nucleotides[(manip.m_fwd.m_value >> (2 * idx)) & 0b11U];
-    os << '(' << manip.m_fwd.m_value << ") / ";
+//     // Forward
+//     for (uint64_t idx{0} ; idx<manip.k ; idx++)
+//         os << nucleotides[(manip.m_fwd.m_value >> (2 * idx)) & 0b11U];
+//     os << '(' << manip.m_fwd.m_value << ") / ";
 
-    // Reverse
-    for (uint64_t idx{0} ; idx<manip.k ; idx++)
-        os << nucleotides[(manip.m_rev.m_value >> (2 * idx)) & 0b11U];
-    os << '('  << manip.m_rev.m_value << ")]";
+//     // Reverse
+//     for (uint64_t idx{0} ; idx<manip.k ; idx++)
+//         os << nucleotides[(manip.m_rev.m_value >> (2 * idx)) & 0b11U];
+//     os << '('  << manip.m_rev.m_value << ")]";
 
-    return os;
-}
+//     return os;
+// }
 
 
 }

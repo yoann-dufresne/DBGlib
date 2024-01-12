@@ -22,7 +22,7 @@ TEST(Kmerator, init)
     km::FileKmerator<kuint> kmerator {fa0, manip};
 
     uint64_t nb_kmer {0};
-    for (km::Kmer<kuint> kmer : kmerator)
+    for ([[maybe_unused]]km::Kmer<kuint> kmer : kmerator)
         nb_kmer += 1;
  
     EXPECT_EQ(nb_kmer, 24);

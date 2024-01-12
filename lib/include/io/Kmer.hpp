@@ -34,24 +34,35 @@ struct Kmer
 
 	bool operator>(const Kmer<kuint>& other) const
 	{ return m_value > other.m_value; }
+
+	template<typename T>
+	friend std::ostream& operator<<(std::ostream& os, Kmer<T>& kmer);
+};
+
+template<typename T>
+std::ostream& operator<<(std::ostream& os, Kmer<T>& kmer)
+{
+	os << kmer.m_value;
+    return os;
 };
 
 
+		using namespace std;
 template<typename kuint>
 class KmerManipulator
 {
 public:
 	const uint64_t k;
-protected:
 	Kmer<kuint> m_fwd;
 	Kmer<kuint> m_rev;
+protected:
 	const kuint m_mask;
 	const uint64_t m_leftmost_shift;
 public:
 	KmerManipulator(const uint64_t k) : k(k), m_fwd(0), m_rev(0)
-		, m_mask( (~static_cast<kuint>(0)) >> (sizeof(kuint) * 8 - 2 * k) ), m_leftmost_shift( (k-1) * 2 )
+		, m_mask( static_cast<kuint>(~static_cast<kuint>(0)) >> (sizeof(kuint) * 8 - 2 * k) ), m_leftmost_shift( (k-1) * 2 )
 	{
-		assert((k+3) / 4 < sizeof(kuint));
+		assert((k+3) / 4 <= sizeof(kuint));
 	}
 
 	void init_kmer()
@@ -68,7 +79,7 @@ public:
 	void set_kmer(const Kmer<kuint>& fwd)
 	{
 		m_fwd = fwd;
-		m_rev = m_mask;
+		m_rev = ~static_cast<kuint>(0);
 	}
 
 	inline Kmer<kuint> add_nucleotide(const kuint nucl)
@@ -78,7 +89,7 @@ public:
 		m_fwd.m_value += nucl << m_leftmost_shift;
 
 		// Reverse
-		const kuint rev_nucl {(nucl + 2) & 0b11};
+		const kuint rev_nucl {(nucl + 2U) & 0b11U};
 		m_rev.m_value <<= 2;
 		m_rev.m_value &= m_mask;
 		m_rev.m_value |= rev_nucl;
