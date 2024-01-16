@@ -11,7 +11,7 @@ using namespace std;
 TEST(SkmerManipulator, enumerate)
 {
 	using kuint = uint8_t;
-    using kpair = km::Skmer<kuint>::pair<kuint>;
+    using kpair = km::Skmer<kuint>::pair;
     constexpr uint64_t k{4};
     constexpr uint64_t m{1};
 
@@ -29,6 +29,19 @@ TEST(SkmerManipulator, enumerate)
     //                                             C       T   A    ,       T       A   A    
                                             {0b00000101, 0b10110000},{0b00011000, 0b00010011}};
 
+    //                            prefix:        _   _       _   A  ,     _   _       A   G  ,     _   A       G   T  ,
+    //                            suffix:          _       _   _    ,       _       _   _    ,       _       _   _    ,
+    const kuint expected_rev_values[][2] = {{0b00000000, 0b00000000},{0b00000000, 0b00000011},{0b00000000, 0b00110010},
+    //                                           A   G       T   T  ,     G   T       T   C  ,     T   T       C   G  ,
+    //                                             _       _   _    ,       A       _   _    ,       G       A   _    ,
+                                            {0b00000011, 0b00100010},{0b00110010, 0b00100001},{0b00101110, 0b00010011},
+    //                                           T   C       G   T  ,     C   G       T   G  ,     G   T       G   A  ,
+    //                                             T       G   A    ,       T       T   G    ,       C       T   T    ,
+                                            {0b00101001, 0b11110010},{0b00011011, 0b10101111},{0b00110110, 0b10111000},
+    //                                           T   G       A   T  ,     G   A       T   T  
+    //                                             G       C   T    ,       T       G   C    
+                                            {0b00101111, 0b01001010},{0b00111000, 0b11100110}};
+
     km::SkmerManipulator<kuint> manip {k, m};
 
     uint64_t idx{0};
@@ -41,7 +54,8 @@ TEST(SkmerManipulator, enumerate)
         const kpair expected_fwd_pair{expected_fwd_values[idx][1], expected_fwd_values[idx][0]};
         ASSERT_EQ(manip.m_fwd.m_pair, expected_fwd_pair);
         
-        // EXPECT_EQ(manip.m_rev, expected_rev_values[idx]);
+        const kpair expected_rev_pair{expected_rev_values[idx][1], expected_rev_values[idx][0]};
+        ASSERT_EQ(manip.m_rev.m_pair, expected_rev_pair);
 
         // EXPECT_EQ(min_kmer, std::min(expected_fwd_values[idx], expected_rev_values[idx]));
 

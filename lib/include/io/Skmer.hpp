@@ -20,14 +20,13 @@ class Skmer
 {
 
 public:
-    template<typename I>
     struct pair;
 
-    pair<kuint> m_pair;
+    pair m_pair;
 
     Skmer() : m_pair()
     {}
-    Skmer(const pair<kuint>& value) : m_pair(value)
+    Skmer(const pair& value) : m_pair(value)
     {}
     Skmer(Skmer& other) : m_pair(other.m_pair)
     {}
@@ -37,7 +36,7 @@ public:
     Skmer<kuint>& operator= (const Skmer<kuint>& other)
     { m_pair = other.m_pair; return *this; }
 
-    Skmer<kuint>& operator= (const pair<kuint>& value)
+    Skmer<kuint>& operator= (const pair& value)
     { m_pair = value; return *this; }
 
     Skmer<kuint>& operator= (Skmer<kuint>&& other)
@@ -45,25 +44,24 @@ public:
 
     /** Neasted struct to manage pair of uints
      **/
-    template<typename I>
     struct pair
     {
         // uint 0 is the less significant
-        I m_value[2];
+        kuint m_value[2];
 
         pair() : m_value(0, 0)
         {}
-        pair(I& single) : m_value(0, single)
+        pair(kuint& single) : m_value(0, single)
         {}
-        pair(const I* values) : m_value(values)
+        pair(const kuint* values) : m_value(values)
         {}
-        pair(const I& less_significant, const I& most_significant) : m_value(less_significant, most_significant)
+        pair(const kuint& less_significant, const kuint& most_significant) : m_value(less_significant, most_significant)
         {}
-        pair(const pair<I>& other) : m_value(other.m_value[0], other.m_value[1])
+        pair(const pair& other) : m_value(other.m_value[0], other.m_value[1])
         {}
 
 
-        pair<I>& operator= (const pair<I>& other)
+        pair& operator= (const pair& other)
         {
             m_value[0] = other.m_value[0];
             m_value[1] = other.m_value[1];
@@ -71,7 +69,7 @@ public:
             return *this;
         }
 
-        bool operator<(const pair<I>& other) const
+        bool operator<(const pair& other) const
         { 
             if (m_value[1] == other.m_value[1])
                 return m_value[0] < other.m_value[0];
@@ -79,30 +77,30 @@ public:
                 return m_value[1] < other.m_value[1];
         }
 
-        bool operator==(const pair<I>& other) const
+        bool operator==(const pair& other) const
         { return m_value[0] == other.m_value[0] and m_value[1] == other.m_value[1]; }
 
-        pair<I> operator~ () const
+        pair operator~ () const
         {
             return pair(~m_value[0], ~m_value[1]);
         }
 
-        pair<I>& operator>>= (const uint64_t shift)
+        pair& operator>>= (const uint64_t shift)
         {
-            if (shift >= sizeof(I) * 8)
+            if (shift >= sizeof(kuint) * 8)
             {
-                m_value[0] = static_cast<I>(m_value[1] >> (shift - sizeof(I) * 8));
-                m_value[1] = static_cast<I>(0);
+                m_value[0] = static_cast<kuint>(m_value[1] >> (shift - sizeof(kuint) * 8));
+                m_value[1] = static_cast<kuint>(0);
             }
             else
             {
                 // Most significant kuint
-                const I transfer_mask {static_cast<I>((~static_cast<I>(0)) >> (sizeof(I) * 8 - shift))};
-                const I transfer_slice {static_cast<I>(m_value[1] & transfer_mask)};
+                const kuint transfer_mask {static_cast<kuint>((~static_cast<kuint>(0)) >> (sizeof(kuint) * 8 - shift))};
+                const kuint transfer_slice {static_cast<kuint>(m_value[1] & transfer_mask)};
                 m_value[1] >>= shift;
                 
                 // Less significant kuint
-                const uint64_t shift_transfered {sizeof(I) * 8 - shift};
+                const uint64_t shift_transfered {sizeof(kuint) * 8 - shift};
                 m_value[0] >>= shift;
                 m_value[0] |= transfer_slice << shift_transfered;
             }
@@ -110,72 +108,72 @@ public:
             return *this;
         }
 
-        pair<I> operator>> (const uint64_t shift) const
+        pair operator>> (const uint64_t shift) const
         {
-            pair<I> p {*this};
+            pair p {*this};
             p >>= shift;
             return p;
         }
 
-        pair<I>& operator<<= (const uint64_t shift)
+        pair& operator<<= (const uint64_t shift)
         {
-            if (shift >= sizeof(I) * 8)
+            if (shift >= sizeof(kuint) * 8)
             {
-                m_value[1] = static_cast<I>(m_value[0] << (shift - sizeof(I) * 8));
-                m_value[0] = static_cast<I>(0);
+                m_value[1] = static_cast<kuint>(m_value[0] << (shift - sizeof(kuint) * 8));
+                m_value[0] = static_cast<kuint>(0);
             }
             else
             {
                 // Less significant kuint
-                const I transfer_mask {static_cast<I>((~static_cast<I>(0)) << (sizeof(I) * 8 - shift))};
-                const I transfer_slice {static_cast<I>(m_value[0] & transfer_mask)};
+                const kuint transfer_mask {static_cast<kuint>((~static_cast<kuint>(0)) << (sizeof(kuint) * 8 - shift))};
+                const kuint transfer_slice {static_cast<kuint>(m_value[0] & transfer_mask)};
                 m_value[0] <<= shift;
                 
                 // Most significant kuint
-                const uint64_t shift_transfered {sizeof(I) * 8 - shift};
+                const uint64_t shift_transfered {sizeof(kuint) * 8 - shift};
                 m_value[1] <<= shift;
                 m_value[1] |= transfer_slice >> shift_transfered;
             }
             return *this;
         }
 
-        pair<I> operator<< (const uint64_t shift) const
+        pair operator<< (const uint64_t shift) const
         {
-            pair<I> p {*this};
+            pair p {*this};
             p <<= shift;
             return p;
         }
 
-        pair<I>& operator&= (const pair<I>& other)
+        pair& operator&= (const pair& other)
         {
             m_value[0] &= other.m_value[0];
             m_value[1] &= other.m_value[1];
             return *this;
         }
 
-        pair<I> operator| (const pair<I>& other) const
+        pair operator| (const pair& other) const
         {
-            pair<I> p{*this};
+            pair p{*this};
             p.m_value[0] |= other.m_value[0];
             p.m_value[1] |= other.m_value[1];
             return p;
         }
 
-        pair<I>& operator|= (const pair<I>& other)
+        pair& operator|= (const pair& other)
         {
             m_value[0] |= other.m_value[0];
             m_value[1] |= other.m_value[1];
             return *this;
         }
 
-        pair<I>& operator|= (const I& value)
+        pair& operator|= (const kuint& value)
         {
             m_value[0] |= value;
             return *this;
         }
 
         
-        friend std::ostream& operator<<(std::ostream& os, const typename Skmer<kuint>::pair<kuint>& p)
+        friend std::ostream& operator<<(std::ostream& os, const typename Skmer<kuint>::pair& p)
         {
             os << static_cast<uint64_t>(p.m_value[1]) << " " << static_cast<uint64_t>(p.m_value[0]);
             return os;
@@ -190,7 +188,7 @@ template<typename kuint>
 class SkmerManipulator
 {
 public:
-    using kpair = typename km::Skmer<kuint>::template pair<kuint>;
+    using kpair = typename km::Skmer<kuint>::pair;
 
     const uint64_t k;
     const uint64_t m;
@@ -203,10 +201,10 @@ protected:
     uint64_t m_suff_size;
     uint64_t m_pref_size;
 
-    Skmer<kuint>::template pair<kuint> m_suffix_buff;
-    Skmer<kuint>::template pair<kuint> m_prefix_buff;
+    Skmer<kuint>::pair m_suffix_buff;
+    Skmer<kuint>::pair m_prefix_buff;
 
-    const Skmer<kuint>::template pair<kuint> max_pair_value;
+    const Skmer<kuint>::pair max_pair_value;
     const kpair m_mask;
 
     // // The amount of bit shifts needed to reach the 4 most significant bits of a kuint

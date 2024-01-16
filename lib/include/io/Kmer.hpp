@@ -89,7 +89,7 @@ public:
 		m_fwd.m_value += nucl << m_leftmost_shift;
 
 		// Reverse
-		const kuint rev_nucl {(nucl + 2U) & 0b11U};
+		const kuint rev_nucl {static_cast<kuint>((nucl + 2U) & 0b11U)};
 		m_rev.m_value <<= 2;
 		m_rev.m_value &= m_mask;
 		m_rev.m_value |= rev_nucl;
