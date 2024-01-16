@@ -8,12 +8,12 @@
 using namespace std;
 
 
-TEST(KmerManipulator, enumerate)
+TEST(SkmerManipulator, enumerate)
 {
-	using kuint = uint16_t;
+	using kuint = uint8_t;
     using kpair = km::Skmer<kuint>::pair<kuint>;
-    constexpr uint64_t k{5};
-    constexpr uint64_t m{3};
+    constexpr uint64_t k{4};
+    constexpr uint64_t m{1};
 
 	const string seq {"TCAAGCACTAA"};
     //                            prefix:        _   _       _   _  ,     _   _       _   _  ,     _   _       _   _  ,
@@ -35,9 +35,10 @@ TEST(KmerManipulator, enumerate)
     for (const auto& letter : seq)
     {
     	kuint nucl {static_cast<kuint>((letter >> 1) & 0b11)};
-        const auto& min_skmer {manip.add_nucleotide(nucl)};
+        [[maybe_unused]]const auto& min_skmer {manip.add_nucleotide(nucl)};
 
-        const kpair expected_fwd_pair{expected_fwd_values[idx][0], expected_fwd_values[idx][1]};
+        //                            Less significant             Most significant
+        const kpair expected_fwd_pair{expected_fwd_values[idx][1], expected_fwd_values[idx][0]};
         ASSERT_EQ(manip.m_fwd.m_pair, expected_fwd_pair);
         
         // EXPECT_EQ(manip.m_rev, expected_rev_values[idx]);
