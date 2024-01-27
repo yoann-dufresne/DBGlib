@@ -1,4 +1,4 @@
-#include <iostream>
+
 
 #ifndef SKMER_H
 #define SKMER_H
@@ -65,8 +65,8 @@ public:
         {}
         pair(kuint& single) : m_value(0, single)
         {}
-        pair(const kuint* values)
-        {m_value[0] = values[0]; m_value[1] = values[1];}
+        pair(const kuint* values) :  m_value(values[1], values[0])
+        {}
         pair(const kuint& less_significant, const kuint& most_significant) : m_value(less_significant, most_significant)
         {}
         pair(const pair& other) : m_value(other.m_value[0], other.m_value[1])
@@ -287,9 +287,7 @@ public:
         // --- Merge the interleaved halves ---
         m_fwd = m_fwd_prefix_buff | m_fwd_suffix_buff;
         m_rev = m_rev_prefix_buff | m_rev_suffix_buff;
-        cout << "m_fwd " << m_fwd << endl;
-        cout << "m_rev " << m_rev << endl;
-
+        
         if (m_rev < m_fwd)
             return m_rev;
         else
