@@ -57,7 +57,7 @@ TEST(SkmerManipulator, enumerate)
         const kpair expected_rev_pair{expected_rev_values[idx][1], expected_rev_values[idx][0]};
         ASSERT_EQ(manip.m_rev.m_pair, expected_rev_pair);
 
-        // EXPECT_EQ(min_kmer, std::min(expected_fwd_values[idx], expected_rev_values[idx]));
+        EXPECT_EQ(min_skmer.m_pair, std::min(expected_fwd_values[idx], expected_rev_values[idx]));
 
         idx += 1;
     }

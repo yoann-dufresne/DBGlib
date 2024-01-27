@@ -1,3 +1,4 @@
+#include <iostream>
 
 #ifndef SKMER_H
 #define SKMER_H
@@ -42,6 +43,17 @@ public:
     Skmer<kuint>& operator= (Skmer<kuint>&& other)
     { m_pair = other.m_pair; return *this; }
 
+    bool operator<(const Skmer<kuint>& other) const
+    { 
+        return m_pair < other.m_pair;
+    }
+
+    friend std::ostream& operator<<(std::ostream& os, const Skmer<kuint>& p)
+    {
+        os << p.m_pair;
+        return os;
+    }
+
     /** Neasted struct to manage pair of uints
      **/
     struct pair
@@ -53,8 +65,8 @@ public:
         {}
         pair(kuint& single) : m_value(0, single)
         {}
-        pair(const kuint* values) : m_value(values)
-        {}
+        pair(const kuint* values)
+        {m_value[0] = values[0]; m_value[1] = values[1];}
         pair(const kuint& less_significant, const kuint& most_significant) : m_value(less_significant, most_significant)
         {}
         pair(const pair& other) : m_value(other.m_value[0], other.m_value[1])
@@ -201,8 +213,10 @@ protected:
     uint64_t m_suff_size;
     uint64_t m_pref_size;
 
-    Skmer<kuint>::pair m_suffix_buff;
-    Skmer<kuint>::pair m_prefix_buff;
+    Skmer<kuint>::pair m_fwd_suffix_buff;
+    Skmer<kuint>::pair m_fwd_prefix_buff;
+    Skmer<kuint>::pair m_rev_suffix_buff;
+    Skmer<kuint>::pair m_rev_prefix_buff;
 
     const Skmer<kuint>::pair max_pair_value;
     const kpair m_mask;
@@ -225,8 +239,10 @@ public:
     void init_skmer()
     {
         // Buffers
-        m_suffix_buff = {0, 0};
-        m_prefix_buff = {0, 0};
+        m_fwd_suffix_buff = {0, 0};
+        m_fwd_prefix_buff = {0, 0};
+        m_rev_suffix_buff = {0, 0};
+        m_rev_prefix_buff = {0, 0};
 
         // Skmers
         m_fwd = Skmer<kuint>{};
@@ -235,26 +251,49 @@ public:
 
     inline Skmer<kuint>& add_nucleotide(const kuint nucl)
     {
-        // --- prefix ---
+        // --- forward prefix ---
         // Shift prefix to the right
-        m_prefix_buff >>= 4;
+        m_fwd_prefix_buff >>= 4;
         // Get nucleotide that move from suffix to prefix
-        const auto central_nucl {m_suffix_buff >> (m_suff_size * 4 - 2)};
+        const auto fwd_central_nucl {m_fwd_suffix_buff >> (m_suff_size * 4 - 2)};
         // Include the nucleotide in the prefix
-        m_prefix_buff |= central_nucl << ((m_pref_size-1) * 4);
+        m_fwd_prefix_buff |= fwd_central_nucl << ((m_pref_size-1) * 4);
 
-        // --- suffix ---
+        // --- reverse suffix ---
+        // Shift the suffix to the right
+        m_rev_suffix_buff >>= 4;
+        // Get the nucleotide to transfer from the prefix to suffix
+        const auto rev_central_nucl {m_rev_prefix_buff >> ((m_pref_size - 1) * 4)};
+        // Include the transfered nucleotide
+        m_rev_suffix_buff |= rev_central_nucl << (m_suff_size * 4 - 2);
+
+        // --- forward suffix ---
         // Shift the suffix
-        m_suffix_buff <<= 4;
+        m_fwd_suffix_buff <<= 4;
         // Add the new nucleotide
-        m_suffix_buff |= nucl << 2;
+        m_fwd_suffix_buff |= nucl << 2;
         // Remove the transfered nucleotide
-        m_suffix_buff &= m_mask;
+        m_fwd_suffix_buff &= m_mask;
 
-        // Merge the interleaved halves
-        m_fwd = m_prefix_buff | m_suffix_buff;
+        // --- reverse prefix ---
+        // Shift the prefix
+        m_rev_prefix_buff <<= 4;
+        // Add the new complement nucleotide
+        const auto compl_nucl {static_cast<kuint>((nucl + 2) % 4)};
+        m_rev_prefix_buff |= compl_nucl;
+        // Remove the transfered nucleotide
+        m_rev_prefix_buff &= m_mask;
 
-        return m_fwd;
+        // --- Merge the interleaved halves ---
+        m_fwd = m_fwd_prefix_buff | m_fwd_suffix_buff;
+        m_rev = m_rev_prefix_buff | m_rev_suffix_buff;
+        cout << "m_fwd " << m_fwd << endl;
+        cout << "m_rev " << m_rev << endl;
+
+        if (m_rev < m_fwd)
+            return m_rev;
+        else
+            return m_fwd;
     }
 
     // template<typename T>
