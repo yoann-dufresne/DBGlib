@@ -65,17 +65,51 @@ public:
      * @param rest the rest to insert.
      * @param insertion_idx
      **/
-    void insert_and_shift(const uint64_t rest, const uint64_t insertion_idx, uint64_t openned_runs=0)
+    void insert_and_shift(const uint64_t rest, const uint64_t insertion_idx, const uint64_t first_free_slot)
     {
         bool inserted {false};
         uint64_t to_insert {rest};
-        uint64_t current_block {insertion_idx >> 6};
-        uint64_t current_64_index {insertion_idx & 0b111111};
 
-        while (not inserted)
+        uint64_t current_idx {insertion_idx};
+        uint64_t current_block_index {insertion_idx >> 6};
+        uint64_t current_64_index {insertion_idx & 0b111111};
+        
+        PackedBlock<r>& current_block = m_rests[current_block_index];
+
+        // Loop over the slots to shift everything until we reach an empty slot
+        while (first_free_slot != current_idx)
         {
-            const uint64_t block_idx;
+            // Rewrite the current slot
+            const uint64_t save {current_block.get(current_64_index)};
+            current_block.set(current_64_index, to_insert);
+            to_insert = save;
+
+            // Jump to the next slot
+            current_idx += 1;
+            current_64_index = (current_64_index + 1) & 0b111111;
+
+            // Block change
+            if (current_64_index == 0)
+            {
+                current_block_index += 1;
+
+                // In casee we hit the right of the datastructure => toricity
+                if ((1UL << q) == current_idx)
+                {
+                    current_idx = 0;
+                    current_block_index = 0;
+                }
+
+                // Getting the current block
+                current_block = m_rests[current_block_index];
+            }
         }
+
+        // Write the last value
+        current_block.set(current_64_index, to_insert);
+
+        // Shift the runend bits from the run moved
+        // TODO
     }
 };
 
