@@ -58,6 +58,16 @@ public:
 	{
 		return (m_vector[index / 64] & set_masks[index % 64]) != 0;
 	}
+
+	/** Shift the bitvector 1 bit to the right. from and to are included positions. Left bit is 0.
+	 * Right bit overflowing is discarded.
+	 * @param from First bit to shift.
+	 * @param to Last bit to shift (and to discard).
+	 **/
+	void toric_right_shift(const uint64_t from, const uint64_t to)
+	{
+		
+	}
 };
 
 

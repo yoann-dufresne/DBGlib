@@ -61,9 +61,10 @@ public:
     }
 
     /** Insert the rest at the insertion_idx position. Performs a cascading shift to move the rests that can already be
-     * in place.
+     * in place. /!\ The function do not add metadata bits for the rest inserted. It has to be done externaly if needed.
      * @param rest the rest to insert.
-     * @param insertion_idx
+     * @param insertion_idx Index where the rest must be inserted
+     * @param first_free_slot Last slot where the function write the casading slots shifted.
      **/
     void insert_and_shift(const uint64_t rest, const uint64_t insertion_idx, const uint64_t first_free_slot)
     {
@@ -109,7 +110,7 @@ public:
         current_block.set(current_64_index, to_insert);
 
         // Shift the runend bits from the run moved
-        // TODO
+        m_runend.toric_shift(insertion_idx, first_free_slot);
     }
 };
 
