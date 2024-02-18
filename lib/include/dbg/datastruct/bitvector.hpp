@@ -70,15 +70,29 @@ public:
 	{
 		const uint64_t first_uint {from/64UL};
 		const uint64_t last_uint {to/64UL};
-		uint64_t current_uint {(from + 63) / 64};
+		uint64_t current_uint {first_uint};
 
-		// If everything is in the same uint
+		//  --- everything is in the same uint ---
 		if (first_uint == last_uint)
 		{
-			// TODO
+			// less significant part of the mask
+			const uint64_t right_mask {(1UL << (from % 64)) - 1UL};
+			// most significant part of the mask
+			uint64_t full_mask {(~static_cast<uint64_t>(0UL)) >> (63 - (to % 64))};
+			// Full mask
+			full_mask ^= right_mask;
+
+			// Get the slice to shift and shift it
+			const uint64_t shifted_slice {(m_vector[current_uint] & full_mask) << 1};
+			// Remove the bits from the slice to shift
+			m_vector[current_uint] &= ~full_mask;
+			// merge shifted slice
+			m_vector[current_uint] |= shifted_slice;
+
 			return;
 		}
 
+		// --- Multiple uint to modify ---
 		uint64_t saved_bit {0};
 		while (current_uint != last_uint)
 		{
