@@ -162,31 +162,68 @@ TEST(bitvector, three_uint_shift)
   // 3 uints bitvector
   Bitvector<192> bv{};
   // Init
-  for (uint64_t i{3} ; i<=6 ; i++) bv.set(i);
+  for (uint64_t i{62} ; i<=65 ; i++) bv.set(i);
+  for (uint64_t i{126} ; i<=129 ; i++) bv.set(i);
+
+  // Initial_verification
+  const uint64_t expected_uints[] {(0b11UL << 62), (0b11UL << 62) | 0b11UL , 0b11UL};
+  for (size_t i{0} ; i<3 ; i++)
+    ASSERT_EQ(bv.m_vector[i], expected_uints[i]);
 
   // Large shift : Everythng should be shifted of 1 position
-  bv.toric_right_shift(0, 10);
-  ASSERT_EQ(bv.m_vector[0], 0b11110000UL);
-  ASSERT_EQ(bv.m_vector[1], 0);
-  ASSERT_EQ(bv.m_vector[2], 0);
+  bv.toric_right_shift(0, 190);
+  const uint64_t expected_large_shift[] {(0b1UL << 63), (0b1UL << 63) | 0b111UL , 0b111UL};
+  for (size_t i{0} ; i<3 ; i++)
+    ASSERT_EQ(bv.m_vector[i], expected_large_shift[i]);
 
   // Reinit
   bv.clear();
-  for (uint64_t i{3} ; i<=6 ; i++) bv.set(i);
+  for (uint64_t i{62} ; i<=65 ; i++) bv.set(i);
+  for (uint64_t i{126} ; i<=129 ; i++) bv.set(i);
 
-  // shift 1s : 1 bit should be lost by overflowing
-  bv.toric_right_shift(3, 6);
-  ASSERT_EQ(bv.m_vector[0], 0b01110000UL);
-  ASSERT_EQ(bv.m_vector[1], 0);
-  ASSERT_EQ(bv.m_vector[2], 0);
+  // Large shift : left half of the vector should be 1 position shifted
+  bv.toric_right_shift(0, 100);
+  const uint64_t expected_half_shift[] {(0b1UL << 63), (0b11UL << 62) | 0b111UL , 0b11UL};
+  for (size_t i{0} ; i<3 ; i++)
+    ASSERT_EQ(bv.m_vector[i], expected_half_shift[i]);
 
   // Reinit
   bv.clear();
-  for (uint64_t i{3} ; i<=6 ; i++) bv.set(i);
+  for (uint64_t i{62} ; i<=65 ; i++) bv.set(i);
+  for (uint64_t i{126} ; i<=129 ; i++) bv.set(i);
 
-  // Truncated shift : The less significant bit of the slice should be set to 0 after shift
-  bv.toric_right_shift(5, 10);
-  ASSERT_EQ(bv.m_vector[0], 0b11011000UL);
-  ASSERT_EQ(bv.m_vector[1], 0);
-  ASSERT_EQ(bv.m_vector[2], 0);
+  // Truncated shift : shift on the uint border
+  bv.toric_right_shift(63, 100);
+  const uint64_t expected_trunckated_shift[] {(0b1UL << 62), (0b11UL << 62) | 0b111UL , 0b11UL};
+  for (size_t i{0} ; i<3 ; i++)
+  {
+    ASSERT_EQ(bv.m_vector[i], expected_trunckated_shift[i]);
+  }
+}
+
+
+TEST(bitvector, toric_shift)
+{
+  // 2 uints bitvector
+  Bitvector<128> bv{};
+  // Init
+  for (uint64_t i{126} ; i<=129 ; i++) bv.set(i%128);
+
+  // Init checks
+  ASSERT_EQ(bv.m_vector[0], 0b11UL);
+  ASSERT_EQ(bv.m_vector[1], 0b11UL << 62);
+
+  // Large shift : Everythng should be shifted of 1 position
+  bv.toric_right_shift(120, 10);
+  ASSERT_EQ(bv.m_vector[0], 0b111UL);
+  ASSERT_EQ(bv.m_vector[1], 0b1UL << 63);
+
+  // Reinit
+  bv.clear();
+  for (uint64_t i{126} ; i<=129 ; i++) bv.set(i%128);
+
+  // Truncated shift : shift on the uint border
+  bv.toric_right_shift(127, 10);
+  ASSERT_EQ(bv.m_vector[0], 0b111UL);
+  ASSERT_EQ(bv.m_vector[1], 0b1UL << 62);
 }

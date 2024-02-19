@@ -80,7 +80,7 @@ public:
 		uint64_t current_uint {first_uint};
 
 		//  --- everything is in the same uint ---
-		if (first_uint == last_uint)
+		if ((first_uint == last_uint) and (from < to))
 		{
 			// - Prepare slice -
 			// less significant part of the mask
@@ -110,7 +110,7 @@ public:
 		while (current_uint != last_uint)
 		{
 			// - Mask the beginning if this is the first uint to be shifted -
-			if (first_uint)
+			if (current_uint == first_uint)
 			{
 				// Create mask to ignore less significant bits until from
 				const uint64_t mask {(1UL << (from % 64)) - 1UL};
@@ -122,6 +122,12 @@ public:
 				m_vector[current_uint] &= mask;
 				// Recompose the vector
 				m_vector[current_uint] |= shifted_slice;
+
+				// increment
+				if (current_uint+1 == num_uint)
+					current_uint = 0;
+				else
+					current_uint += 1;
 				continue;
 			}
 
@@ -131,7 +137,7 @@ public:
 			m_vector[current_uint] = new_value;
 
 			// increment
-			if (current_uint == num_uint)
+			if (current_uint+1 == num_uint)
 				current_uint = 0;
 			else
 				current_uint += 1;
@@ -141,7 +147,7 @@ public:
 		// Create mask to ignore most significant bits after to
 		const uint64_t mask {(~static_cast<uint64_t>(0)) >> (63 - (to % 64))};
 		// extract and shift the slice
-		const uint64_t shifted_slice {(m_vector[current_uint] & mask) << 1};
+		const uint64_t shifted_slice {(m_vector[current_uint] << 1) & mask};
 		// Remove the slice bits
 		m_vector[current_uint] &= ~mask;
 		// Recompose the vector
