@@ -121,3 +121,37 @@ TEST(bitvector, bitvector_get_1bit)
     }
   }
 }
+
+TEST(bitvector, single_uint_shift)
+{
+  // 3 uints bitvector
+  Bitvector<192> bv{};
+  // Init
+  for (uint64_t i{3} ; i<=6 ; i++) bv.set(i);
+
+  // Large shift : Everythng should be shifted of 1 position
+  bv.toric_right_shift(0, 10);
+  ASSERT_EQ(bv.m_vector[0], 0b11110000UL);
+  ASSERT_EQ(bv.m_vector[1], 0);
+  ASSERT_EQ(bv.m_vector[2], 0);
+
+  // Reinit
+  bv.clear();
+  for (uint64_t i{3} ; i<=6 ; i++) bv.set(i);
+
+  // shift 1s : 1 bit should be lost by overflowing
+  bv.toric_right_shift(3, 6);
+  ASSERT_EQ(bv.m_vector[0], 0b01110000UL);
+  ASSERT_EQ(bv.m_vector[1], 0);
+  ASSERT_EQ(bv.m_vector[2], 0);
+
+  // Reinit
+  bv.clear();
+  for (uint64_t i{3} ; i<=6 ; i++) bv.set(i);
+
+  // Truncated shift : The less significant bit of the slice should be set to 0 after shift
+  bv.toric_right_shift(5, 10);
+  ASSERT_EQ(bv.m_vector[0], 0b11011000UL);
+  ASSERT_EQ(bv.m_vector[1], 0);
+  ASSERT_EQ(bv.m_vector[2], 0);
+}

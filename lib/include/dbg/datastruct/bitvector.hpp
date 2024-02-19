@@ -29,12 +29,18 @@ class Bitvector
 	}
 	static constexpr auto unset_masks = create_unset_masks();
 
-	constexpr uint64_t m_num_uint {size / 64};
+	static constexpr uint64_t num_uint {size / 64};
 	
 public:
 	std::array<uint64_t, (size+63UL)/64> m_vector {};
 
 	Bitvector () {};
+
+	void clear()
+	{
+		for (size_t i{0} ; i<m_vector.size() ; i++)
+			m_vector[i] = 0;
+	}
 
 	void set(const uint64_t index)
 	{
@@ -68,6 +74,7 @@ public:
 	 **/
 	void toric_right_shift(const uint64_t from, const uint64_t to)
 	{
+		// std::cout << "shift from " << from << " to " << to << std::endl;
 		const uint64_t first_uint {from/64UL};
 		const uint64_t last_uint {to/64UL};
 		uint64_t current_uint {first_uint};
@@ -75,54 +82,70 @@ public:
 		//  --- everything is in the same uint ---
 		if (first_uint == last_uint)
 		{
+			// - Prepare slice -
 			// less significant part of the mask
-			const uint64_t right_mask {(1UL << (from % 64)) - 1UL};
+			const uint64_t slice_right_mask {(~static_cast<uint64_t>(0UL)) >> (63 - (from % 64))};
 			// most significant part of the mask
-			uint64_t full_mask {(~static_cast<uint64_t>(0UL)) >> (63 - (to % 64))};
-			// Full mask
-			full_mask ^= right_mask;
-
+			const uint64_t left_mask {(~static_cast<uint64_t>(0UL)) >> (63 - (to % 64))};
+			const uint64_t slice_full_mask {slice_right_mask ^ left_mask};
 			// Get the slice to shift and shift it
-			const uint64_t shifted_slice {(m_vector[current_uint] & full_mask) << 1};
+			const uint64_t shifted_slice {(m_vector[current_uint] << 1 ) & slice_full_mask};
+
+			// - Prepare vector -
+			// less significant part of the mask
+			const uint64_t vector_right_mask {slice_right_mask >> 1};
+			// most significant part of the mask
+			const uint64_t vector_full_mask {~(left_mask ^ vector_right_mask)};
 			// Remove the bits from the slice to shift
-			m_vector[current_uint] &= ~full_mask;
-			// merge shifted slice
+			m_vector[current_uint] &= vector_full_mask;
+
+			// - Merge everything -
 			m_vector[current_uint] |= shifted_slice;
 
 			return;
 		}
 
 		// --- Multiple uint to modify ---
-		uint64_t saved_bit {0};
+		uint64_t carry_bit {0};
 		while (current_uint != last_uint)
 		{
-			// Mask the beginning if this is the first uint to be shifted
+			// - Mask the beginning if this is the first uint to be shifted -
 			if (first_uint)
 			{
 				// Create mask to ignore less significant bits until from
-				uint64_t mask;
-				// TODO
-
-				// Modify the vector value
-				uint64_t new_value {m_vector[current_uint] << 1};
-				saved_bit = m_vector[current_uint] >> 63;
-				m_vector[current_uint] = new_value;
+				const uint64_t mask {(1UL << (from % 64)) - 1UL};
+				// extract and shift the slice
+				const uint64_t shifted_slice {(m_vector[current_uint] & ~mask) << 1};
+				// Save the carry bit
+				carry_bit = m_vector[current_uint] >> 63;
+				// Remove the slice bits
+				m_vector[current_uint] &= mask;
+				// Recompose the vector
+				m_vector[current_uint] |= shifted_slice;
 				continue;
 			}
 
-			// Shift the uint of the bitvector
-			uint64_t new_value {saved_bit | m_vector[current_uint] << 1};
-			saved_bit = m_vector[current_uint] >> 63;
+			// - Shift a bitvector uint that is not in the extremities of the shifted area -
+			uint64_t new_value {carry_bit | m_vector[current_uint] << 1};
+			carry_bit = m_vector[current_uint] >> 63;
 			m_vector[current_uint] = new_value;
 
 			// increment
-			if (current_uint == m_num_uint)
+			if (current_uint == num_uint)
 				current_uint = 0;
 			else
 				current_uint += 1;
 		}
 
-		// shifts in the last uint
+		// - shifts in the last uint -
+		// Create mask to ignore most significant bits after to
+		const uint64_t mask {(~static_cast<uint64_t>(0)) >> (63 - (to % 64))};
+		// extract and shift the slice
+		const uint64_t shifted_slice {(m_vector[current_uint] & mask) << 1};
+		// Remove the slice bits
+		m_vector[current_uint] &= ~mask;
+		// Recompose the vector
+		m_vector[current_uint] |= shifted_slice | carry_bit;
 	}
 };
 
