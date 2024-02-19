@@ -5,7 +5,7 @@
 // using namespace std;
 
 
-TEST(packedblock, packedblock_init)
+TEST(packedblock, init)
 {
   PackedBlock<33> block {};
 
@@ -16,7 +16,7 @@ TEST(packedblock, packedblock_init)
   }
 }
 
-TEST(packedblock, packedblock_insert_1s)
+TEST(packedblock, insert_1s)
 {
   PackedBlock<33> block {};
   const uint64_t ones { ( 1UL << 33 ) - 1};
@@ -40,7 +40,7 @@ TEST(packedblock, packedblock_insert_1s)
 }
 
 
-TEST(packedblock, packedblock_insert_in_run)
+TEST(packedblock, insert_in_run)
 {
   PackedBlock<33> block {};
   const uint64_t ones { ( 1UL << 33 ) - 1};

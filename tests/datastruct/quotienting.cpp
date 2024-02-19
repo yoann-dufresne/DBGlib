@@ -7,7 +7,7 @@
 using namespace std;
 
 
-TEST(quotientpair, quotientpair_init)
+TEST(quotientpair, init)
 {
   QR<6, 6> qr {42, 17};
 
@@ -15,7 +15,7 @@ TEST(quotientpair, quotientpair_init)
   ASSERT_EQ(qr.rest, 17);
 }
 
-TEST(quotientpair, quotientpair_overflow_init)
+TEST(quotientpair, overflow_init)
 {
   QR<6, 6> qr {64+27, 64+43};
 
