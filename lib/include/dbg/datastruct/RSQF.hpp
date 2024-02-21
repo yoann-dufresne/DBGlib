@@ -68,7 +68,6 @@ public:
      **/
     void insert_and_shift(const uint64_t rest, const uint64_t insertion_idx, const uint64_t first_free_slot)
     {
-        bool inserted {false};
         uint64_t to_insert {rest};
 
         uint64_t current_idx {insertion_idx};
@@ -109,8 +108,15 @@ public:
         // Write the last value
         current_block.set(current_64_index, to_insert);
 
-        // Shift the runend bits from the run moved
-        m_runend.toric_shift(insertion_idx, first_free_slot);
+        if (insertion_idx == first_free_slot)
+        {
+            // The insertion is performed at the very end of a run. The runend bit is before the insertion
+            m_runend.unset((insertion_idx+m_runend.get_size()-1) % m_runend.get_size());
+            m_runend.set(insertion_idx);
+        }
+        else
+            // Shift the runend bits from the runs moved
+            m_runend.toric_right_shift(insertion_idx, first_free_slot);
     }
 };
 

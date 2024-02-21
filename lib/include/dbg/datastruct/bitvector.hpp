@@ -42,6 +42,11 @@ public:
 			m_vector[i] = 0;
 	}
 
+	inline uint64_t get_size() const
+	{
+		return size;
+	}
+
 	void set(const uint64_t index)
 	{
 		const uint64_t vector_index {index / 64};

@@ -53,3 +53,58 @@ TEST(RSQF, insert_free_space)
   const uint64_t block_idx {quotient / 64};
   ASSERT_EQ(filter.m_rests[block_idx].get(quotient % 64), rest);
 }
+
+TEST(RSQF, insert_and_shift)
+{
+  QuotientFilter<7, 5, LeftQuotienting> filter{};
+  const LeftQuotienting quotienting{};
+
+  const uint64_t quotient {2};
+  const uint64_t rest1 {0b11011};
+  const uint64_t val1 {(quotient << 5) | rest1};
+
+  const auto qr {quotienting.compute<7, 5>(val1)};
+  filter.insert_in_free_space(qr);
+
+  // --- Insert at the beginning of a run ---
+  const uint64_t rest2 {0b01000};
+  // const uint64_t val2 {(quotient << 5) | rest2};
+  filter.insert_and_shift(rest2, quotient, quotient+1);
+
+  // Verification of the run start
+  ASSERT_EQ(filter.m_occupied.get(quotient), true);
+  ASSERT_EQ(filter.m_occupied.get(quotient+1), false);
+  // Verification of the run end
+  ASSERT_EQ(filter.m_runend.get(quotient), false);
+  ASSERT_EQ(filter.m_runend.get(quotient+1), true);
+  // Are the rests at the right place ?
+  const uint64_t block_idx {quotient / 64};
+  ASSERT_EQ(filter.m_rests[block_idx].get(quotient % 64), rest2);
+  ASSERT_EQ(filter.m_rests[block_idx].get((quotient + 1) % 64), rest1);
+
+  // --- Insert at the beginning of a run and shift 2 values ---
+  const uint64_t rest3 {0b00001};
+  // const uint64_t val2 {(quotient << 5) | rest2};
+  filter.insert_and_shift(rest3, quotient, quotient+2);
+
+  // Verification of the run start
+  ASSERT_EQ(filter.m_occupied.get(quotient), true);
+  // Verification of the run end
+  ASSERT_EQ(filter.m_runend.get(quotient+1), false);
+  ASSERT_EQ(filter.m_runend.get(quotient+2), true);
+  // Are the rests at the right place ?
+  ASSERT_EQ(filter.m_rests[block_idx].get(quotient % 64), rest3);
+  ASSERT_EQ(filter.m_rests[block_idx].get((quotient + 1) % 64), rest2);
+  ASSERT_EQ(filter.m_rests[block_idx].get((quotient + 2) % 64), rest1);
+
+  // --- Insert at the end of a run ---
+  const uint64_t rest4 {0b11111};
+  // const uint64_t val2 {(quotient << 5) | rest2};
+  filter.insert_and_shift(rest4, quotient+3, quotient+3);
+
+  // Verification of the run end
+  ASSERT_EQ(filter.m_runend.get(quotient+2), false);
+  ASSERT_EQ(filter.m_runend.get(quotient+3), true);
+  // Are the rests at the right place ?
+  ASSERT_EQ(filter.m_rests[block_idx].get((quotient+3) % 64), rest4);
+}
