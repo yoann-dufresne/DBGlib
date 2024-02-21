@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <array>
+#include <bit>
 
 
 #ifndef BITVEC_H
@@ -70,6 +71,61 @@ public:
 	bool get(const uint64_t index) const
 	{
 		return (m_vector[index / 64] & set_masks[index % 64]) != 0;
+	}
+
+	/** Count the number of bits set to 1 from start_idx to rank_idx. This rank operation is toric.
+	 * /!\ Known limitation: You cannot rank the whole bitvector in a toric way. If you are asking results on toric
+	 * query, the ranked bit must be in a different uint than the start bit.
+	 * @param start_idx The bit index from which the rank should start (Bit 0 in classic rank)
+	 * @param rank_idx Position in the bitvector where to stop the ranking (position included)
+	 * 
+	 * @return The number of 1s found between the 2 boundaries (included)
+	 **/
+	uint64_t rank(const uint64_t start_idx, const uint64_t rank_idx) const
+	{
+		const uint64_t start_uint {start_idx / 64};
+		uint64_t current_uint {start_uint};
+		const uint64_t stop_uint {rank_idx / 64};
+
+		// --- Both limits are in the same uint ---
+		if (start_uint == stop_uint)
+		{
+			// Create a mask
+			const uint64_t start_mask {(~static_cast<uint64_t>(0)) << (start_idx % 64)};
+			const uint64_t stop_mask {(~static_cast<uint64_t>(0)) >> (63 - (rank_idx % 64))};
+			const uint64_t mask {start_mask & stop_mask};
+
+			// Return the number of 1s
+			return std::popcount<uint64_t>(m_vector[start_uint] & mask);
+		}
+
+		// --- Multiple uint coverage ---
+		// Start uint
+		const uint64_t start_mask {(~static_cast<uint64_t>(0)) << (start_idx % 64)};
+		uint64_t num_ones {static_cast<uint64_t>(std::popcount(m_vector[start_uint] & start_mask))};
+
+		if (current_uint+1 == num_uint)
+			current_uint = 0;
+		else
+			current_uint += 1;
+
+		// Middle uints
+		while (current_uint != stop_uint)
+		{
+			num_ones += std::popcount(m_vector[current_uint]);
+
+			// uint increment
+			if (current_uint+1 == num_uint)
+				current_uint = 0;
+			else
+				current_uint += 1;
+		}
+
+		// Last uint
+		const uint64_t stop_mask {(~static_cast<uint64_t>(0)) >> (63 - (rank_idx % 64))};
+		num_ones += std::popcount(m_vector[stop_uint] & stop_mask);
+
+		return num_ones;
 	}
 
 	/** Shift the bitvector 1 bit to the right. from and to are included positions. Left bit is 0.

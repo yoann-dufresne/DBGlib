@@ -122,7 +122,7 @@ TEST(bitvector, get_1bit)
   }
 }
 
-TEST(bitvector, single_uint_shift)
+TEST(bitvector_shift, single_uint)
 {
   // 3 uints bitvector
   Bitvector<192> bv{};
@@ -157,7 +157,7 @@ TEST(bitvector, single_uint_shift)
 }
 
 
-TEST(bitvector, three_uint_shift)
+TEST(bitvector_shift, three_uint)
 {
   // 3 uints bitvector
   Bitvector<192> bv{};
@@ -202,7 +202,7 @@ TEST(bitvector, three_uint_shift)
 }
 
 
-TEST(bitvector, toric_shift)
+TEST(bitvector_shift, toric)
 {
   // 2 uints bitvector
   Bitvector<128> bv{};
@@ -226,4 +226,48 @@ TEST(bitvector, toric_shift)
   bv.toric_right_shift(127, 10);
   ASSERT_EQ(bv.m_vector[0], 0b111UL);
   ASSERT_EQ(bv.m_vector[1], 0b1UL << 62);
+}
+
+
+TEST(bitvector_rank, single_uint)
+{
+  // 3 uints bitvector
+  Bitvector<64> bv{};
+  // Init
+  for (uint64_t i{0} ; i<64 ; i+=8) { bv.set(i); bv.set(i+7); }
+
+  ASSERT_EQ(bv.rank(0, 63), 16);
+  ASSERT_EQ(bv.rank(7, 7), 1);
+  ASSERT_EQ(bv.rank(31, 32), 2);
+}
+
+TEST(bitvector_rank, triple_uint)
+{
+  // 3 uints bitvector
+  Bitvector<192> bv{};
+  // Init
+  for (uint64_t i{0} ; i<192 ; i+=8) { bv.set(i); bv.set(i+7); }
+
+  // 2 uints ranks
+  ASSERT_EQ(bv.rank(0, 127), 32);
+  ASSERT_EQ(bv.rank(32, 95), 16);
+  ASSERT_EQ(bv.rank(0, 64), 17);
+  ASSERT_EQ(bv.rank(63, 127), 17);
+  // 3 uints ranks
+  ASSERT_EQ(bv.rank(0, 191), 48);
+  ASSERT_EQ(bv.rank(32, 159), 32);
+  ASSERT_EQ(bv.rank(63, 191), 33);
+  ASSERT_EQ(bv.rank(0, 128), 33);
+}
+
+TEST(bitvector_rank, toric)
+{
+  // 3 uints bitvector
+  Bitvector<256> bv{};
+  // // Init
+  for (uint64_t i{0} ; i<256 ; i+=8) { bv.set(i); bv.set(i+7); }
+
+  ASSERT_EQ(bv.rank(128, 127), 64);
+  ASSERT_EQ(bv.rank(64, 63), 64);
+  ASSERT_EQ(bv.rank(255, 0), 2);
 }
