@@ -291,15 +291,29 @@ TEST(bitvector_select, single_uint)
 TEST(bitvector_select, toric)
 {
   // 3 uints bitvector
-  Bitvector<64> bv{};
+  Bitvector<128> bv{};
   // Init
-  for (uint64_t i{0} ; i<64 ; i+=8) { bv.set(i); bv.set(i+7); }
+  for (uint64_t i{0} ; i<128 ; i+=8) { bv.set(i); bv.set(i+7); }
 
 
-  for (uint64_t i{0} ; i<(64/8) ; i+=1)
+  for (uint64_t i{0} ; i<(128/8) ; i+=1)
   {
-    cout << i << endl;
-    ASSERT_EQ(bv.select(32, 2*i+1), (32 + 8 * i    ) % 64 );
-    ASSERT_EQ(bv.select(32, 2*i+2), (32 + 8 * i + 7) % 64 );
+    ASSERT_EQ(bv.select(64, 2*i+1), (64 + 8 * i    ) % 128 );
+    ASSERT_EQ(bv.select(64, 2*i+2), (64 + 8 * i + 7) % 128 );
   }
+}
+
+
+TEST(bitvector_select, multiple_uints)
+{
+  // 3 uints bitvector
+  Bitvector<256> bv{};
+  // // Init
+  for (uint64_t i{0} ; i<256 ; i+=8) { bv.set(i); bv.set(i+7); }
+
+  ASSERT_EQ(bv.select(0, 1), 0);
+  ASSERT_EQ(bv.select(0, 64), 255);
+  ASSERT_EQ(bv.select(128, 33), 0);
+  ASSERT_EQ(bv.select(128, 34), 7);
+  ASSERT_EQ(bv.select(128, 49), 64);
 }

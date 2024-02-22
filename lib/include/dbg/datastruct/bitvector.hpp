@@ -167,7 +167,7 @@ public:
 
 			// Update select
 			if (local_1s >= remaining_1s)
-				return current_uint * 64UL + select64(m_vector[current_uint], num_1s);
+				return current_uint * 64UL + select64(m_vector[current_uint], remaining_1s);
 			else
 				remaining_1s -= local_1s;
 
@@ -189,6 +189,7 @@ public:
 
 	/** Shift the bitvector 1 bit to the right. from and to are included positions. Left bit is 0.
 	 * Right bit overflowing is discarded.
+	 * /!\ Do not work on toric queries that starts and ends in the same uint.
 	 * @param from First bit to shift.
 	 * @param to Last bit to shift (and to discard).
 	 **/
