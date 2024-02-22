@@ -1,6 +1,7 @@
 #include <cstdint>
 #include <array>
 #include <bit>
+#include <immintrin.h>
 
 
 #ifndef BITVEC_H
@@ -126,6 +127,64 @@ public:
 		num_ones += std::popcount(m_vector[stop_uint] & stop_mask);
 
 		return num_ones;
+	}
+
+	/** Return the position of the val-th bit set starting from index start_idx. The answer is computed using toricity
+	 * if needed.
+	 * @param start_idx The bit index from which the select should start (Bit 0 in classic select)
+	 * @param val The number of bits to count
+	 * 
+	 * @return The absolute position of the val-th set bit.
+	 **/
+	uint64_t select(const uint64_t start_idx, const uint64_t num_1s) const
+	{
+		const uint64_t start_uint {start_idx / 64};
+		uint64_t current_uint {start_uint};
+		uint64_t remaining_1s {num_1s};
+
+		// --- Multiple uint coverage ---
+		// Start uint
+		const uint64_t start_mask {(~static_cast<uint64_t>(0)) << (start_idx % 64)};
+		const uint64_t buffered_uint {m_vector[start_uint] & start_mask};
+		const uint64_t first_1s {static_cast<uint64_t>(std::popcount(buffered_uint))};
+
+		// Update select
+		if (first_1s >= remaining_1s)
+			return current_uint * 64UL + select64(buffered_uint, num_1s);
+		else
+			remaining_1s -= first_1s;
+
+		// Update block
+		if (current_uint+1 == num_uint)
+			current_uint = 0;
+		else
+			current_uint += 1;
+
+		// Middle uints
+		while (current_uint != start_uint)
+		{
+			const uint64_t local_1s {static_cast<uint64_t>(std::popcount(m_vector[current_uint]))};
+
+			// Update select
+			if (local_1s >= remaining_1s)
+				return current_uint * 64UL + select64(m_vector[current_uint], num_1s);
+			else
+				remaining_1s -= local_1s;
+
+			// uint increment
+			if (current_uint+1 == num_uint)
+				current_uint = 0;
+			else
+				current_uint += 1;
+		}
+
+		return size;
+	}
+
+	static uint64_t select64 (const uint64_t vector, const uint64_t num_1s)
+	{
+		const uint64_t pdep_val {_pdep_u64(1ULL << (num_1s-1), vector)};
+		return _tzcnt_u64(pdep_val);
 	}
 
 	/** Shift the bitvector 1 bit to the right. from and to are included positions. Left bit is 0.

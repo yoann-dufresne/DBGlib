@@ -271,3 +271,35 @@ TEST(bitvector_rank, toric)
   ASSERT_EQ(bv.rank(64, 63), 64);
   ASSERT_EQ(bv.rank(255, 0), 2);
 }
+
+
+TEST(bitvector_select, single_uint)
+{
+  // 3 uints bitvector
+  Bitvector<64> bv{};
+  // Init
+  for (uint64_t i{0} ; i<64 ; i+=8) { bv.set(i); bv.set(i+7); }
+
+
+  for (uint64_t i{0} ; i<(64/8) ; i+=1)
+  {
+    ASSERT_EQ(bv.select(0, 2*i+1), 8*i  );
+    ASSERT_EQ(bv.select(0, 2*i+2), 8*i+7);
+  }
+}
+
+TEST(bitvector_select, toric)
+{
+  // 3 uints bitvector
+  Bitvector<64> bv{};
+  // Init
+  for (uint64_t i{0} ; i<64 ; i+=8) { bv.set(i); bv.set(i+7); }
+
+
+  for (uint64_t i{0} ; i<(64/8) ; i+=1)
+  {
+    cout << i << endl;
+    ASSERT_EQ(bv.select(32, 2*i+1), (32 + 8 * i    ) % 64 );
+    ASSERT_EQ(bv.select(32, 2*i+2), (32 + 8 * i + 7) % 64 );
+  }
+}
