@@ -131,8 +131,9 @@ public:
 
 	/** Return the position of the val-th bit set starting from index start_idx. The answer is computed using toricity
 	 * if needed.
+	 * /!\ Limitation: val == 0 leads to undefined behaviour.
 	 * @param start_idx The bit index from which the select should start (Bit 0 in classic select)
-	 * @param val The number of bits to count
+	 * @param val The number of bits to count (Must be > 0)
 	 * 
 	 * @return The absolute position of the val-th set bit.
 	 **/

@@ -117,4 +117,15 @@ TEST(RSQF_first_unused, in_block)
 {
     QuotientFilter<7, 5, LeftQuotienting> filter{};
     const LeftQuotienting quotienting{};
+    // Filter filled at quotients 2/3/4                     qqqrrrrr
+    filter.insert_in_free_space(quotienting.compute<7, 5>(0b01010001));
+    filter.insert_in_free_space(quotienting.compute<7, 5>(0b01110001));
+    filter.insert_in_free_space(quotienting.compute<7, 5>(0b10010001));
+
+    ASSERT_EQ(filter.first_unused_slot(1), 1);
+    ASSERT_EQ(filter.first_unused_slot(2), 5);
+    ASSERT_EQ(filter.first_unused_slot(3), 5);
+    ASSERT_EQ(filter.first_unused_slot(4), 5);
+    ASSERT_EQ(filter.first_unused_slot(5), 5);
+    ASSERT_EQ(filter.first_unused_slot(6), 6);
 }
