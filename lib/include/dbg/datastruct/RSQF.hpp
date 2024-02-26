@@ -54,6 +54,7 @@ public:
         uint64_t current_block {start_quotient / 64UL};
         uint64_t current_relative_quotient {start_quotient % 64};
         uint64_t first_block_quotient {current_block * 64UL};
+        uint64_t current_absolute_offset {m_offsets[current_block] + first_block_quotient};
 
         // cout << current_quotient << " " << current_block << " " << first_block_quotient << endl;
         
@@ -65,8 +66,10 @@ public:
             // Jump to the corresponding runend by performing a select on opened runs
             current_runend_idx = m_runend.select(first_block_quotient + m_offsets[current_block], local_occ_rank);
         else if (m_offsets[current_block] > current_relative_quotient)
+        {
             // No opened runs in this block but remaining ones in the offset
-            current_runend_idx = (m_offsets[current_block] - 1) % size;
+            current_runend_idx = (current_absolute_offset - 1) % size;
+        }
         else
             return start_quotient;
 
@@ -78,16 +81,17 @@ public:
             current_block = current_quotient / 64UL;
             current_relative_quotient = current_quotient % 64;
             first_block_quotient = current_block * 64UL;
+            current_absolute_offset = m_offsets[current_block] + first_block_quotient;
 
             // Compute the number of runs started in this block up to the current position
             local_occ_rank = m_occupied.rank(first_block_quotient, current_quotient);
 
             if (local_occ_rank > 0)
                 // Jump to the runend corresponding to the number of runs in this block
-                current_runend_idx = m_runend.select(first_block_quotient + m_offsets[current_block], local_occ_rank);
+                current_runend_idx = m_runend.select((first_block_quotient + m_offsets[current_block]) % size, local_occ_rank);
             else if (m_offsets[current_block] > current_relative_quotient)
                 // No opened runs in this block but remaining ones in the offset
-                current_runend_idx = (m_offsets[current_block] - 1) % size;
+                current_runend_idx = (current_absolute_offset - 1) % size;
             else
                 return current_quotient;
         }

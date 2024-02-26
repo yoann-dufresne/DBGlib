@@ -113,7 +113,7 @@ TEST(RSQF, insert_and_shift)
 }
 
 
-TEST(RSQF_first_unused, in_block)
+TEST(RSQF_first_unused, in_block_no_offset)
 {
     QuotientFilter<7, 5, LeftQuotienting> filter{};
     const LeftQuotienting quotienting{};
@@ -128,4 +128,77 @@ TEST(RSQF_first_unused, in_block)
     ASSERT_EQ(filter.first_unused_slot(4), 5);
     ASSERT_EQ(filter.first_unused_slot(5), 5);
     ASSERT_EQ(filter.first_unused_slot(6), 6);
+}
+
+TEST(RSQF_first_unused, in_block_offset)
+{
+    QuotientFilter<7, 5, LeftQuotienting> filter{};
+    const LeftQuotienting quotienting{};
+    // Filter filled at quotients 2/3/4                     qqqrrrrr
+    filter.insert_in_free_space(quotienting.compute<7, 5>(0b01010001));
+    filter.insert_in_free_space(quotienting.compute<7, 5>(0b01110001));
+    filter.insert_in_free_space(quotienting.compute<7, 5>(0b10010001));
+
+    // Faking an offset
+    filter.m_offsets[0] = 3;
+    filter.m_runend.set(10);
+
+    for (uint64_t i{0} ; i<=11 ; i++)
+        ASSERT_EQ(filter.first_unused_slot(i), 11);
+    for (uint64_t i{12} ; i<64 ; i++)
+        ASSERT_EQ(filter.first_unused_slot(i), i);
+}
+
+
+TEST(RSQF_first_unused, out_of_block_offset)
+{
+    QuotientFilter<7, 5, LeftQuotienting> filter{};
+
+    // Faking a multiblock offset
+    filter.m_offsets[0] = 70;
+    filter.m_offsets[1] = 6;
+    filter.m_runend.set(69);
+
+    for (uint64_t i{0} ; i<=70 ; i++)
+    {
+        ASSERT_EQ(filter.first_unused_slot(i), 70);
+    }
+    for (uint64_t i{71} ; i<100 ; i++)
+        ASSERT_EQ(filter.first_unused_slot(i), i);
+}
+
+TEST(RSQF_first_unused, out_of_block_no_offset)
+{
+    QuotientFilter<7, 5, LeftQuotienting> filter{};
+
+    // Faking a long run spreading on 2 blocks
+    filter.m_occupied.set(10);
+    filter.m_offsets[1] = 7;
+    filter.m_runend.set(70);
+
+    for (uint64_t i{0} ; i<10 ; i++)
+        ASSERT_EQ(filter.first_unused_slot(i), i);
+    for (uint64_t i{10} ; i<=71 ; i++)
+        ASSERT_EQ(filter.first_unused_slot(i), 71);
+    for (uint64_t i{72} ; i<100 ; i++)
+        ASSERT_EQ(filter.first_unused_slot(i), i);
+}
+
+TEST(RSQF_first_unused, out_of_block_toric)
+{
+    QuotientFilter<7, 5, LeftQuotienting> filter{};
+
+    // Faking a long run spreading on 2 blocks
+    filter.m_occupied.set(75);
+    filter.m_offsets[0] = 11;
+    filter.m_runend.set(10);
+
+    for (uint64_t i{64} ; i<75 ; i++)
+        ASSERT_EQ(filter.first_unused_slot(i), i);
+    for (uint64_t i{75} ; i<128 ; i++)
+        ASSERT_EQ(filter.first_unused_slot(i), 11);
+    for (uint64_t i{0} ; i<=11 ; i++)
+        ASSERT_EQ(filter.first_unused_slot(i), 11);
+    for (uint64_t i{12} ; i<64 ; i++)
+        ASSERT_EQ(filter.first_unused_slot(i), i);
 }
