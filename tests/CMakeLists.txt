@@ -8,13 +8,13 @@ add_executable(dbglib-tests ${TEST_SOURCES})
 target_link_libraries(dbglib-tests PUBLIC gtest zlib kseqpp pthread dbglib)
 
 if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0.0)
-  target_link_libraries(dbglib-tests PUBLIC stdc++fs)
+    target_link_libraries(dbglib-tests PUBLIC stdc++fs)
 endif()
 
 
 add_test(
-  NAME dbglib:all
-  COMMAND dbglib-tests
+    NAME dbglib:all
+    COMMAND dbglib-tests
 )
 
 # TODO: Why this is not working ?
