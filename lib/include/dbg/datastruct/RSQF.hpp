@@ -61,10 +61,12 @@ public:
         // Compute the number of runs started in this block up to the current position
         uint64_t local_occ_rank {m_occupied.rank(first_block_quotient, current_quotient)};
         uint64_t current_runend_idx {0};
+        uint64_t next_block {current_block};
         
-        if (local_occ_rank > 0)
+        if (local_occ_rank > 0) {
             // Jump to the corresponding runend by performing a select on opened runs
             current_runend_idx = m_runend.select(first_block_quotient + m_offsets[current_block], local_occ_rank);
+        }
         else if (m_offsets[current_block] > current_relative_quotient)
         {
             // No opened runs in this block but remaining ones in the offset
@@ -73,8 +75,10 @@ public:
         else
             return start_quotient;
 
+        next_block = current_runend_idx / 64UL;
+
         // If last jump was negative, un empty slot has been found
-        while (current_runend_idx >= current_quotient)
+        while ((next_block != current_block) or (current_runend_idx >= current_quotient))
         {
             // Init new values
             current_quotient = current_runend_idx + 1UL;
@@ -94,6 +98,8 @@ public:
                 current_runend_idx = (current_absolute_offset - 1) % size;
             else
                 return current_quotient;
+
+            next_block = current_runend_idx / 64UL;
         }
 
         return current_quotient;
