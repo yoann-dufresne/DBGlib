@@ -202,3 +202,48 @@ TEST(RSQF_first_unused, out_of_block_toric)
     for (uint64_t i{12} ; i<64 ; i++)
         ASSERT_EQ(filter.first_unused_slot(i), i);
 }
+
+TEST(RSQF_INSERT_POSITION, inside_block_insert)
+{
+    QuotientFilter<7, 5, LeftQuotienting> filter{};
+    filter.m_occupied.set(10);
+    filter.m_runend.set(12);
+    filter.m_rests[0].set(10, 3);
+    filter.m_rests[0].set(11, 5);
+    filter.m_rests[0].set(12, 7);
+    cout << "Test rest " << filter.m_rests[0].get(12) << endl;
+
+    QR<7, 5> element_before {9, 4};
+    QR<7, 5> element_after {11, 4};
+
+    ASSERT_EQ(filter.compute_insert_position(element_before), 9);
+    ASSERT_EQ(filter.compute_insert_position(element_after), 13);
+
+    QR<7, 5> element2 {10, 2};
+    ASSERT_EQ(filter.compute_insert_position(element2), 10);
+    QR<7, 5> element4 {10, 4};
+    ASSERT_EQ(filter.compute_insert_position(element4), 11);
+    QR<7, 5> element6 {10, 6};
+    ASSERT_EQ(filter.compute_insert_position(element6), 12);
+    QR<7, 5> element8 {10, 8};
+    ASSERT_EQ(filter.compute_insert_position(element8), 13);
+}
+
+TEST(RSQF_INSERT_POSITION, shifted_next_block)
+{
+    QuotientFilter<7, 5, LeftQuotienting> filter{};
+    filter.m_occupied.set(61);
+    filter.m_runend.set(63);
+    filter.m_rests[0].set(61, 3);
+    filter.m_rests[0].set(62, 5);
+    filter.m_rests[0].set(63, 7);
+    cout << "Test rest " << filter.m_rests[0].get(61) << endl;
+
+    QR<7, 5> element_after {62, 4};
+    ASSERT_EQ(filter.compute_insert_position(element_after), 64);
+
+    QR<7, 5> element6 {61, 6};
+    ASSERT_EQ(filter.compute_insert_position(element6), 63);
+    QR<7, 5> element8 {61, 8};
+    ASSERT_EQ(filter.compute_insert_position(element8), 64);
+}

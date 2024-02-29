@@ -110,7 +110,65 @@ public:
      **/
     uint64_t compute_insert_position(const QR<q, r>& element) const
     {
-        return 0;
+        using namespace std;
+        cout << "compute_insert_position " << element.quotient << " " << element.rest << endl;
+        const uint64_t block_idx {element.quotient / 64UL};
+        const uint64_t first_block_quotient {block_idx * 64UL};
+
+        // Rank the number of run stating in this block before the element theoritical position
+        const uint64_t block_runs {element.quotient == 0 ? 0 : m_occupied.rank(first_block_quotient, element.quotient)};
+        uint64_t real_insertion_slot {element.quotient};
+
+        // If there are runs to jump over
+        if (block_runs > 0)
+        {
+            real_insertion_slot = m_runend.select(m_offsets[block_idx], block_runs) + 1UL;
+        }
+        // If there is an offset to jump over
+        else if (m_offsets[block_idx] > element.quotient)
+        {
+            real_insertion_slot = m_offsets[block_idx];
+        }
+        // else: current quotient is the right place to go
+
+        // Find the position in the run
+        if (m_occupied.get(element.quotient))
+        {
+            // Is it the run end ?
+            while (element.rest > m_rests[real_insertion_slot / 64UL].get(real_insertion_slot % 64UL))
+            {
+                // End of the run. Must insert here
+                if (m_runend.get(real_insertion_slot))
+                {
+                    cout << "runend return" << endl;
+                    cout << "last rest " << m_rests[real_insertion_slot / 64UL].get(real_insertion_slot % 64UL) << endl;
+                    return (real_insertion_slot + 1) % size;
+                }
+
+                // Not the right place for insertion
+                real_insertion_slot += 1;
+                if (real_insertion_slot == size)
+                    real_insertion_slot = 0;
+            }
+        }
+
+        cout << "final return" << endl;
+        return real_insertion_slot;
+    }
+
+    /** Insert an element in the RSQF.
+     * @param element The element to insert that is splitted into quotient and value
+     **/
+    void insert(const QR<q, r>& element)
+    {
+        // TODO - Verify for resize
+
+        // 1 - Get the slot where to insert the new element
+        // insert_position = compute_insert_position(element);
+
+        // 2 - Compute the position where to shift the colided element
+        // 3 - Insert and swap using the previously computed coordinates.
+        // 4 - Add metadata and increase offset if needed
     }
 
 
