@@ -76,3 +76,12 @@ TEST(packedblock, insert_in_run)
         block.set(i, 0);
     }
 }
+
+
+TEST(packedblock, insert_63)
+{
+    PackedBlock<5> block {};
+
+    block.set(63, 7);
+    ASSERT_EQ(block.get(63), 7);
+}

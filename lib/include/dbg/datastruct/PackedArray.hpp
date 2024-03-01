@@ -3,8 +3,8 @@
 #include <cstdint>
 
 
-// #include <iostream>
-// using namespace std;
+#include <iostream>
+using namespace std;
 
 #ifndef PACKED_ARRAY_H
 #define PACKED_ARRAY_H
@@ -40,7 +40,7 @@ struct PackedBlock
 		// Shift right if only one uint
 		if (not second_byte)
 		{
-			const auto right_shift { 64UL - slot_size - first_bit_position };
+			const auto right_shift { 64UL - slot_size - (first_bit_position % 64) };
 			value >>= right_shift;
 		}
 		// Shift left and add the second uint if needed
@@ -86,13 +86,10 @@ struct PackedBlock
 		const auto bits_in_uint { std::min((64UL - (first_bit_position % 64)), slot_size) };
 		const bool second_byte { bits_in_uint < slot_size };
 
-		// cout << first_bit_position << " " << first_uint_position << endl;
-		// cout << first_bit_position << "/" << slot_size << " = " << first_uint_position << endl;
-		// cout << bits_in_uint << " " << second_byte << endl;
-
 		if (not second_byte)
 		{
-			const auto empty_trailing_bits {64 - first_bit_position - slot_size};
+			const auto empty_trailing_bits {64 - (first_bit_position % 64) - slot_size};
+			// cout << "empty_trailing_bits " << 
 			// Align the value
 			value <<= empty_trailing_bits;
 			// Mask already present bits

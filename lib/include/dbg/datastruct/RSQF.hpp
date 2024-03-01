@@ -27,22 +27,32 @@ public:
     // Offset vector : An offset value corresponds to the offset to the next slot that can corresponds to the current block.
     std::array<uint64_t, QuotientFilter::num_blocks> m_offsets {};
 
-    QuotientFilter()
+    QuotientFilter() : m_quotienting ({})
     {
         static_assert(64 >= q + r);
         static_assert(q >= 6, "Minimum structure size is 64 elements => q must be larger or equal to 6");
         static_assert(r < 64, "Rest size must be < 64 to be stored in uint64_t arrays");
     };
 
-    void insert(const uint64_t& value)
+
+    /** Insert an element in the RSQF.
+     * @param element The element to insert that is splitted into quotient and value
+     **/
+    void insert(const uint64_t value)
     {
-        const auto qr {m_quotienting.compute<q, r>(value)};
-        const auto block {qr.quotient >> 6};
+        // TODO - Verify for resize
 
-        // What shit do I need to apply to find where to insert the rest ?
-        // Do the insertion
+        // 0 - Compute the quotienting
+        QR<q,r> element = (this->m_quotienting.compute<q,r>(value));
 
-        m_occupied.set(value);
+        // 1 - Get the slot where to insert the new element
+        const uint64_t insert_position {compute_insert_position(element)};
+
+        // 2 - Compute the position where to shift the colided element
+        const uint64_t free_slot {first_unused_slot(insert_position)};
+
+        // 3 - Insert and swap using the previously computed coordinates.
+        insert_and_shift(element, insert_position, free_slot);
     }
 
 
@@ -110,8 +120,6 @@ public:
      **/
     uint64_t compute_insert_position(const QR<q, r>& element) const
     {
-        using namespace std;
-        cout << "compute_insert_position " << element.quotient << " " << element.rest << endl;
         const uint64_t block_idx {element.quotient / 64UL};
         const uint64_t first_block_quotient {block_idx * 64UL};
 
@@ -140,8 +148,6 @@ public:
                 // End of the run. Must insert here
                 if (m_runend.get(real_insertion_slot))
                 {
-                    cout << "runend return" << endl;
-                    cout << "last rest " << m_rests[real_insertion_slot / 64UL].get(real_insertion_slot % 64UL) << endl;
                     return (real_insertion_slot + 1) % size;
                 }
 
@@ -152,45 +158,35 @@ public:
             }
         }
 
-        cout << "final return" << endl;
         return real_insertion_slot;
-    }
-
-    /** Insert an element in the RSQF.
-     * @param element The element to insert that is splitted into quotient and value
-     **/
-    void insert(const QR<q, r>& element)
-    {
-        // TODO - Verify for resize
-
-        // 1 - Get the slot where to insert the new element
-        // insert_position = compute_insert_position(element);
-
-        // 2 - Compute the position where to shift the colided element
-        // 3 - Insert and swap using the previously computed coordinates.
-        // 4 - Add metadata and increase offset if needed
     }
 
 
     /** Insert the rest in the QF at the address represented by the quotient. Do not test the slot availablity and
      * insert as if it was free.
-     * @param qr The quotient/rest split of the value.
+     * @param element The quotient/rest split of the value.
+     * @param insertion_slot Real slot index where to insert the rest (if the value is shifted)
      **/
-    void insert_in_free_space(const QR<q, r>& qr)
+    void insert_in_free_space(const QR<q, r>& element, const uint64_t insertion_slot)
     {
         // Set metadata for the new run
-        m_occupied.set(qr.quotient);
-        m_runend.set(qr.quotient);
+        m_occupied.set(element.quotient);
+        m_runend.set(insertion_slot);
 
         // Set the rest
-        const uint64_t block_idx {static_cast<uint64_t>(qr.quotient) >> 6};
-        const uint64_t relative_idx {qr.quotient & 0b111111UL};
-        m_rests[block_idx].set(relative_idx, qr.rest);
+        const uint64_t block_idx {static_cast<uint64_t>(insertion_slot) >> 6};
+        const uint64_t relative_idx {element.quotient & 0b111111UL};
+        m_rests[block_idx].set(relative_idx, element.rest);
+    }
+
+    void insert_in_free_space(const QR<q, r>& element)
+    {
+        insert_in_free_space(element, element.quotient);
     }
 
 
     /** Insert the rest at the insertion_idx position. Performs a cascading shift to move the rests that can already be
-     * in place. /!\ The function do not add metadata bits for the rest inserted. It has to be done externaly if needed.
+     * in place.
      * @param rest the rest to insert.
      * @param insertion_idx Index where the rest must be inserted
      * @param first_free_slot Last slot where the function write the casading slots shifted.
@@ -205,7 +201,7 @@ public:
         
         PackedBlock<r>& current_block = m_rests[current_block_index];
 
-        // Loop over the slots to shift everything until we reach an empty slot
+        // --- Loop over the slots to shift everything until we reach an empty slot ---
         while (first_free_slot != current_idx)
         {
             // Rewrite the current slot
@@ -221,6 +217,8 @@ public:
             if (current_64_index == 0)
             {
                 current_block_index += 1;
+                // Pushing a new rest in that block => updating the offset
+                m_offsets[current_block_index] += 1;
 
                 // In casee we hit the right of the datastructure => toricity
                 if ((1UL << q) == current_idx)
@@ -234,18 +232,26 @@ public:
             }
         }
 
-        // Write the last value
+        // --- Write the last value ---
         current_block.set(current_64_index, to_insert);
 
-        if (insertion_idx == first_free_slot)
+        // --- shift the runends that has been moved ---
+        if (insertion_idx != first_free_slot)
+            m_runend.toric_right_shift(insertion_idx, first_free_slot);
+
+        // --- Set the occupied and metadata bits ---
+        // New run inserted
+        if (not m_occupied.get(element.quotient))
         {
-            // The insertion is performed at the very end of a run. The runend bit is before the insertion
-            m_runend.unset((insertion_idx+m_runend.get_size()-1) % m_runend.get_size());
+            m_occupied.set(element.quotient);
             m_runend.set(insertion_idx);
         }
-        else
-            // Shift the runend bits from the runs moved
-            m_runend.toric_right_shift(insertion_idx, first_free_slot);
+        // Inserted at the end of an existing run
+        else if (insertion_idx == first_free_slot)
+        {
+            m_runend.unset((insertion_idx + size - 1) % size);
+            m_runend.set(insertion_idx);
+        }
     }
 };
 

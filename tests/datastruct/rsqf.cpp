@@ -31,7 +31,7 @@ TEST_F(QuotientFilter_8_3_Fixture, init)
     ASSERT_EQ(std::size(m_rests), 4);
 }
 
-TEST(RSQF, insert_free_space)
+TEST(RSQF_insert, insert_free_space)
 {
     QuotientFilter<7, 5, LeftQuotienting> filter{};
     const LeftQuotienting quotienting{};
@@ -54,7 +54,7 @@ TEST(RSQF, insert_free_space)
     ASSERT_EQ(filter.m_rests[block_idx].get(quotient % 64), rest);
 }
 
-TEST(RSQF, insert_and_shift)
+TEST(RSQF_insert, insert_and_shift)
 {
     QuotientFilter<7, 5, LeftQuotienting> filter{};
     const LeftQuotienting quotienting{};
@@ -211,7 +211,6 @@ TEST(RSQF_INSERT_POSITION, inside_block_insert)
     filter.m_rests[0].set(10, 3);
     filter.m_rests[0].set(11, 5);
     filter.m_rests[0].set(12, 7);
-    cout << "Test rest " << filter.m_rests[0].get(12) << endl;
 
     QR<7, 5> element_before {9, 4};
     QR<7, 5> element_after {11, 4};
@@ -237,7 +236,6 @@ TEST(RSQF_INSERT_POSITION, shifted_next_block)
     filter.m_rests[0].set(61, 3);
     filter.m_rests[0].set(62, 5);
     filter.m_rests[0].set(63, 7);
-    cout << "Test rest " << filter.m_rests[0].get(61) << endl;
 
     QR<7, 5> element_after {62, 4};
     ASSERT_EQ(filter.compute_insert_position(element_after), 64);
@@ -246,4 +244,22 @@ TEST(RSQF_INSERT_POSITION, shifted_next_block)
     ASSERT_EQ(filter.compute_insert_position(element6), 63);
     QR<7, 5> element8 {61, 8};
     ASSERT_EQ(filter.compute_insert_position(element8), 64);
+}
+
+
+TEST(RSQF, full_insert)
+{
+    QuotientFilter<7, 5, LeftQuotienting> filter{};
+
+    for (uint64_t i{3} ; i<=7 ; i+=2)
+    {
+        const uint64_t element {(10UL << 5) | i};
+        filter.insert(element);
+    }
+
+    ASSERT_EQ(filter.m_rests[0].get(9), 0);
+    ASSERT_EQ(filter.m_rests[0].get(10), 3);
+    ASSERT_EQ(filter.m_rests[0].get(11), 5);
+    ASSERT_EQ(filter.m_rests[0].get(12), 7);
+    ASSERT_EQ(filter.m_rests[0].get(13), 0);
 }
