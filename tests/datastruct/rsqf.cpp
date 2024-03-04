@@ -34,7 +34,6 @@ TEST_F(QuotientFilter_8_3_Fixture, init)
 TEST(RSQF_insert, insert_free_space)
 {
     QuotientFilter<7, 5, LeftQuotienting> filter{};
-    const LeftQuotienting quotienting{};
 
     // Prepare the example to insert
     const uint64_t quotient {2};
@@ -42,7 +41,7 @@ TEST(RSQF_insert, insert_free_space)
     const uint64_t val {(quotient << 5) | rest};
 
     // Perform insertion
-    const auto qr {quotienting.compute<7, 5>(val)};
+    const auto qr {LeftQuotienting::compute<7,5>(val)};
     filter.insert_in_free_space(qr);
 
     // Verify metadata
@@ -57,18 +56,17 @@ TEST(RSQF_insert, insert_free_space)
 TEST(RSQF_insert, insert_and_shift)
 {
     QuotientFilter<7, 5, LeftQuotienting> filter{};
-    const LeftQuotienting quotienting{};
 
     const uint64_t quotient {2};
     const uint64_t rest1 {0b11011};
     const uint64_t val1 {(quotient << 5) | rest1};
 
-    const auto qr {quotienting.compute<7, 5>(val1)};
+    const auto qr {LeftQuotienting::compute<7, 5>(val1)};
     filter.insert_in_free_space(qr);
 
     // --- Insert at the beginning of a run ---
     const uint64_t rest2 {0b01000};
-    const auto val2 {quotienting.compute<7, 5>((quotient << 5) | rest2)};
+    const auto val2 {LeftQuotienting::compute<7, 5>((quotient << 5) | rest2)};
     // const uint64_t val2 {(quotient << 5) | rest2};
     filter.insert_and_shift(val2, quotient, quotient+1);
 
@@ -85,7 +83,7 @@ TEST(RSQF_insert, insert_and_shift)
 
     // --- Insert at the beginning of a run and shift 2 values ---
     const uint64_t rest3 {0b00001};
-    const auto val3 {quotienting.compute<7, 5>((quotient << 5) | rest3)};
+    const auto val3 {LeftQuotienting::compute<7, 5>((quotient << 5) | rest3)};
     // const uint64_t val2 {(quotient << 5) | rest2};
     filter.insert_and_shift(val3, quotient, quotient+2);
 
@@ -101,7 +99,7 @@ TEST(RSQF_insert, insert_and_shift)
 
     // --- Insert at the end of a run ---
     const uint64_t rest4 {0b11111};
-    const auto val4 {quotienting.compute<7, 5>((quotient << 5) | rest4)};
+    const auto val4 {LeftQuotienting::compute<7, 5>((quotient << 5) | rest4)};
     // const uint64_t val2 {(quotient << 5) | rest2};
     filter.insert_and_shift(val4, quotient+3, quotient+3);
 
@@ -116,11 +114,10 @@ TEST(RSQF_insert, insert_and_shift)
 TEST(RSQF_first_unused, in_block_no_offset)
 {
     QuotientFilter<7, 5, LeftQuotienting> filter{};
-    const LeftQuotienting quotienting{};
     // Filter filled at quotients 2/3/4                     qqqrrrrr
-    filter.insert_in_free_space(quotienting.compute<7, 5>(0b01010001));
-    filter.insert_in_free_space(quotienting.compute<7, 5>(0b01110001));
-    filter.insert_in_free_space(quotienting.compute<7, 5>(0b10010001));
+    filter.insert_in_free_space(LeftQuotienting::compute<7, 5>(0b01010001));
+    filter.insert_in_free_space(LeftQuotienting::compute<7, 5>(0b01110001));
+    filter.insert_in_free_space(LeftQuotienting::compute<7, 5>(0b10010001));
 
     ASSERT_EQ(filter.first_unused_slot(1), 1);
     ASSERT_EQ(filter.first_unused_slot(2), 5);
@@ -133,11 +130,10 @@ TEST(RSQF_first_unused, in_block_no_offset)
 TEST(RSQF_first_unused, in_block_offset)
 {
     QuotientFilter<7, 5, LeftQuotienting> filter{};
-    const LeftQuotienting quotienting{};
     // Filter filled at quotients 2/3/4                     qqqrrrrr
-    filter.insert_in_free_space(quotienting.compute<7, 5>(0b01010001));
-    filter.insert_in_free_space(quotienting.compute<7, 5>(0b01110001));
-    filter.insert_in_free_space(quotienting.compute<7, 5>(0b10010001));
+    filter.insert_in_free_space(LeftQuotienting::compute<7, 5>(0b01010001));
+    filter.insert_in_free_space(LeftQuotienting::compute<7, 5>(0b01110001));
+    filter.insert_in_free_space(LeftQuotienting::compute<7, 5>(0b10010001));
 
     // Faking an offset
     filter.m_offsets[0] = 3;

@@ -15,8 +15,6 @@ protected:
     // Number of blocks. Defined at compile time
     static constexpr uint64_t num_blocks {1UL << (q - 6)};
     static constexpr uint64_t size {num_blocks * 64UL};
-    // Quotienting class
-    Quotienting m_quotienting {};
 public:
     // Storage area of rests
     std::array<PackedBlock<r>, QuotientFilter::num_blocks> m_rests {};
@@ -27,7 +25,7 @@ public:
     // Offset vector : An offset value corresponds to the offset to the next slot that can corresponds to the current block.
     std::array<uint64_t, QuotientFilter::num_blocks> m_offsets {};
 
-    QuotientFilter() : m_quotienting ({})
+    QuotientFilter()
     {
         static_assert(64 >= q + r);
         static_assert(q >= 6, "Minimum structure size is 64 elements => q must be larger or equal to 6");
@@ -43,7 +41,7 @@ public:
         // TODO - Verify for resize
 
         // 0 - Compute the quotienting
-        QR<q,r> element = (this->m_quotienting.compute<q,r>(value));
+        QR<q,r> element = Quotienting::compute<q,r>(value);
 
         // 1 - Get the slot where to insert the new element
         const uint64_t insert_position {compute_insert_position(element)};

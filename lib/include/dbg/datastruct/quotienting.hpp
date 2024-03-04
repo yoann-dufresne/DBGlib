@@ -16,7 +16,7 @@ struct QR
 struct LeftQuotienting
 {
     template<uint64_t q, uint64_t r>
-    QR<q,r> compute(const uint64_t value) const
+    static QR<q,r> compute(const uint64_t value)
     {
         return QR<q, r>(value >> r, value);
     }
@@ -25,7 +25,7 @@ struct LeftQuotienting
 struct RightQuotienting
 {
     template<uint64_t q, uint64_t r>
-    QR<q,r> compute(const uint64_t value) const
+    static QR<q,r> compute(const uint64_t value)
     {
         return QR<q, r>(value, value >> q);
     }
