@@ -41,7 +41,7 @@ public:
         // TODO - Verify for resize
 
         // 0 - Compute the quotienting
-        QR<q,r> element = Quotienting::compute<q,r>(value);
+        QR<q,r> element = (Quotienting::template compute<q,r>(value));
 
         // 1 - Get the slot where to insert the new element
         const uint64_t insert_position {compute_insert_position(element)};
@@ -128,7 +128,7 @@ public:
         // If there are runs to jump over
         if (block_runs > 0)
         {
-            real_insertion_slot = m_runend.select(m_offsets[block_idx], block_runs) + 1UL;
+            real_insertion_slot = (m_runend.select(m_offsets[block_idx], block_runs) + 1UL) % size;
         }
         // If there is an offset to jump over
         else if (m_offsets[block_idx] > element.quotient)

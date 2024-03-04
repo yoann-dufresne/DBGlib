@@ -243,7 +243,7 @@ TEST(RSQF_INSERT_POSITION, shifted_next_block)
 }
 
 
-TEST(RSQF, full_insert)
+TEST(RSQF_full_insert, single_block)
 {
     QuotientFilter<7, 5, LeftQuotienting> filter{};
 
@@ -258,4 +258,40 @@ TEST(RSQF, full_insert)
     ASSERT_EQ(filter.m_rests[0].get(11), 5);
     ASSERT_EQ(filter.m_rests[0].get(12), 7);
     ASSERT_EQ(filter.m_rests[0].get(13), 0);
+}
+
+
+TEST(RSQF_full_insert, block_overflow)
+{
+    QuotientFilter<7, 5, LeftQuotienting> filter{};
+
+    for (uint64_t i{3} ; i<=7 ; i+=2)
+    {
+        const uint64_t element {(62UL << 5) | i};
+        filter.insert(element);
+    }
+
+    ASSERT_EQ(filter.m_rests[0].get(61), 0);
+    ASSERT_EQ(filter.m_rests[0].get(62), 3);
+    ASSERT_EQ(filter.m_rests[0].get(63), 5);
+    ASSERT_EQ(filter.m_rests[1].get(0), 7);
+    ASSERT_EQ(filter.m_rests[1].get(1), 0);
+}
+
+
+TEST(RSQF_full_insert, toric)
+{
+    QuotientFilter<7, 5, LeftQuotienting> filter{};
+
+    for (uint64_t i{3} ; i<=7 ; i+=2)
+    {
+        const uint64_t element {(127UL << 5) | i};
+        filter.insert(element);
+    }
+
+    ASSERT_EQ(filter.m_rests[1].get(62), 0);
+    ASSERT_EQ(filter.m_rests[1].get(63), 3);
+    ASSERT_EQ(filter.m_rests[0].get(0), 5);
+    ASSERT_EQ(filter.m_rests[0].get(1), 7);
+    ASSERT_EQ(filter.m_rests[0].get(2), 0);
 }
