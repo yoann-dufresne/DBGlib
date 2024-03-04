@@ -295,3 +295,40 @@ TEST(RSQF_full_insert, toric)
     ASSERT_EQ(filter.m_rests[0].get(1), 7);
     ASSERT_EQ(filter.m_rests[0].get(2), 0);
 }
+
+
+TEST(RSQF_get, single_slot)
+{
+    for (uint64_t insert_slot{0} ; insert_slot<128 ; insert_slot++)
+    {
+        QuotientFilter<7, 5, LeftQuotienting> filter{};
+        const uint64_t insert_value{(insert_slot << 5) | 0b10001};
+        filter.insert(insert_value);
+
+        for(uint64_t query_slot{0} ; query_slot<128 ; query_slot++)
+        {
+            const uint64_t query_value{(query_slot << 5) | 0b10001};
+            ASSERT_EQ(filter.get(query_value), query_slot == insert_slot);
+        }
+    }
+}
+
+TEST(RSQF_get, triple_insertion)
+{
+    for (uint64_t insert_slot{0} ; insert_slot<128 ; insert_slot++)
+    {
+        cout << "insert_slot " << insert_slot << endl;
+        QuotientFilter<7, 5, LeftQuotienting> filter{};
+        for (uint64_t i{1} ; i<=3 ; i++)
+        {
+            const uint64_t insert_value{(insert_slot << 5) | 0b10000 | i};
+            filter.insert(insert_value);
+        }
+
+        for(uint64_t query_slot{0} ; query_slot<128 ; query_slot++)
+        {
+            const uint64_t query_value{(query_slot << 5) | 0b10010};
+            ASSERT_EQ(filter.get(query_value), query_slot == insert_slot);
+        }
+    }
+}

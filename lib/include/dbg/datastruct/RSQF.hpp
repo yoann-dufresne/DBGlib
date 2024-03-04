@@ -41,7 +41,7 @@ public:
         // TODO - Verify for resize
 
         // 0 - Compute the quotienting
-        QR<q,r> element = (Quotienting::template compute<q,r>(value));
+        const QR<q,r> element {Quotienting::template compute<q,r>(value)};
 
         // 1 - Get the slot where to insert the new element
         const uint64_t insert_position {compute_insert_position(element)};
@@ -51,6 +51,23 @@ public:
 
         // 3 - Insert and swap using the previously computed coordinates.
         insert_and_shift(element, insert_position, free_slot);
+    }
+
+
+    /** Check the presence of the value inside of the filter.
+     * @param value The value to look for
+     * @return true if the value has been inserted/
+     **/
+    bool get(const uint64_t value) const
+    {
+        // 0 - Compute the quotienting
+        const QR<q,r> element = (Quotienting::template compute<q,r>(value));
+
+        // 1 - Get the slot where the value should be
+        const uint64_t slot {compute_insert_position(element)};
+
+        // 2 - Is it present ?
+        return m_rests[slot / 64UL].get(slot % 64UL) == element.rest;
     }
 
 
