@@ -92,6 +92,14 @@ public:
         bool operator==(const pair& other) const
         { return m_value[0] == other.m_value[0] and m_value[1] == other.m_value[1]; }
 
+        bool operator<=(const pair& other) const
+        {
+            if (m_value[1] == other.m_value[1])
+                return m_value[0] <= other.mvalue[0];
+            else
+                return m_value[1] < other.m_value[1];
+        }
+
         pair operator~ () const
         {
             return pair(~m_value[0], ~m_value[1]);
@@ -292,6 +300,10 @@ public:
             return m_rev;
         else
             return m_fwd;
+    }
+
+    Skmer<kuint> get_max() const{
+        return max_pair_value;
     }
 
     // template<typename T>
