@@ -1,5 +1,6 @@
 #include <array>
 #include <cstdint>
+#include <bit>
 
 #include <dbg/datastruct/PackedArray.hpp>
 #include <dbg/datastruct/bitvector.hpp>
@@ -31,6 +32,32 @@ public:
         static_assert(q >= 6, "Minimum structure size is 64 elements => q must be larger or equal to 6");
         static_assert(r < 64, "Rest size must be < 64 to be stored in uint64_t arrays");
     };
+
+
+    /** Construct a filter from a half size one.
+     **/
+    QuotientFilter(const QuotientFilter<q-1, r+1, Quotienting>& other)
+    {
+        if (r == 0)
+            throw std::runtime_error("Cannot create a QF with 0 bit size slots.");
+
+        // 0 - Get the position of the first run of the QF
+        const uint64_t first_occ {m_occupied.first_one(0)};
+        const uint64_t first_end {m_runend.first_one(m_offsets[0])};
+
+        // 1 - Setup the first run for the loop
+        uint64_t current_occ {first_occ};
+        uint64_t current_end {first_end};
+        do {
+            cout << "run [" << current_occ << " ; " << current_end << "]" << endl;
+            // 2 - Enumerates the rests in between run start and run end
+
+            // 3 - Go to the next run
+            current_occ = m_occupied.first_one((current_occ + 1) % size);
+            current_end = m_runend.first_one((current_end + 1) % size);
+        }
+        while (next_occ != first_occ);
+    }
 
 
     /** Insert an element in the RSQF.
