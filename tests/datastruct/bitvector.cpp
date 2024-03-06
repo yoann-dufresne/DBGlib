@@ -4,6 +4,7 @@
 
 
 #include <iostream>
+#include <bit>
 using namespace std;
 
 
@@ -316,4 +317,22 @@ TEST(bitvector_select, multiple_uints)
     ASSERT_EQ(bv.select(128, 33), 0);
     ASSERT_EQ(bv.select(128, 34), 7);
     ASSERT_EQ(bv.select(128, 49), 64);
+}
+
+
+TEST(bitvector_first_one, single_uint)
+{
+    Bitvector<64> bv{};
+
+    // Set all the 2^i bits
+    for (uint64_t i{0} ; i<6 ; i++)
+        bv.set(1UL<<i);
+
+    ASSERT_EQ(bv.first_one(0), 1);
+    ASSERT_EQ(bv.first_one(2), 2);
+    ASSERT_EQ(bv.first_one(3), 4);
+    ASSERT_EQ(bv.first_one(5), 8);
+    ASSERT_EQ(bv.first_one(9), 16);
+    ASSERT_EQ(bv.first_one(17), 32);
+    ASSERT_EQ(bv.first_one(33), 1);
 }

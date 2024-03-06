@@ -56,7 +56,7 @@ public:
             current_occ = m_occupied.first_one((current_occ + 1) % size);
             current_end = m_runend.first_one((current_end + 1) % size);
         }
-        while (next_occ != first_occ);
+        while (current_occ != first_occ);
     }
 
 
