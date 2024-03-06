@@ -51,6 +51,21 @@ public:
 
         // 3 - Insert and swap using the previously computed coordinates.
         insert_and_shift(element, insert_position, free_slot);
+        
+        // 4 - Update the offsets changed before the insertion position
+        const uint64_t insertion_block {insert_position / 64UL};
+        uint64_t current_block {element.quotient / 64UL};
+
+        while (current_block != insertion_block)
+        {
+            // Jump to the next block
+            current_block += 1;
+            if (current_block == num_blocks)
+                current_block = 0;
+
+            // We changed block so offset has to be incremented
+            m_offsets[current_block] += 1;
+        }
     }
 
 
@@ -148,7 +163,7 @@ public:
             real_insertion_slot = (m_runend.select(m_offsets[block_idx], block_runs) + 1UL) % size;
         }
         // If there is an offset to jump over
-        else if (m_offsets[block_idx] > element.quotient)
+        else if (m_offsets[block_idx] > (element.quotient % 64UL))
         {
             real_insertion_slot = m_offsets[block_idx];
         }

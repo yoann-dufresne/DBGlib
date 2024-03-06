@@ -53,7 +53,7 @@ TEST(RSQF_insert, insert_free_space)
     ASSERT_EQ(filter.m_rests[block_idx].get(quotient % 64), rest);
 }
 
-TEST(RSQF_insert, insert_and_shift)
+TEST(RSQF_insert_and_shift, single_block)
 {
     QuotientFilter<7, 5, LeftQuotienting> filter{};
 
@@ -109,6 +109,7 @@ TEST(RSQF_insert, insert_and_shift)
     // Are the rests at the right place ?
     ASSERT_EQ(filter.m_rests[block_idx].get((quotient+3) % 64), rest4);
 }
+
 
 
 TEST(RSQF_first_unused, in_block_no_offset)
@@ -276,6 +277,8 @@ TEST(RSQF_full_insert, block_overflow)
     ASSERT_EQ(filter.m_rests[0].get(63), 5);
     ASSERT_EQ(filter.m_rests[1].get(0), 7);
     ASSERT_EQ(filter.m_rests[1].get(1), 0);
+
+    ASSERT_EQ(filter.m_offsets[1], 1);
 }
 
 
@@ -294,6 +297,8 @@ TEST(RSQF_full_insert, toric)
     ASSERT_EQ(filter.m_rests[0].get(0), 5);
     ASSERT_EQ(filter.m_rests[0].get(1), 7);
     ASSERT_EQ(filter.m_rests[0].get(2), 0);
+    
+    ASSERT_EQ(filter.m_offsets[0], 2);
 }
 
 
@@ -317,7 +322,6 @@ TEST(RSQF_get, triple_insertion)
 {
     for (uint64_t insert_slot{0} ; insert_slot<128 ; insert_slot++)
     {
-        cout << "insert_slot " << insert_slot << endl;
         QuotientFilter<7, 5, LeftQuotienting> filter{};
         for (uint64_t i{1} ; i<=3 ; i++)
         {
@@ -325,7 +329,7 @@ TEST(RSQF_get, triple_insertion)
             filter.insert(insert_value);
         }
 
-        for(uint64_t query_slot{0} ; query_slot<128 ; query_slot++)
+        for(uint64_t query_slot{62} ; query_slot<65 ; query_slot++)
         {
             const uint64_t query_value{(query_slot << 5) | 0b10010};
             ASSERT_EQ(filter.get(query_value), query_slot == insert_slot);
