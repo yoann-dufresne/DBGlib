@@ -48,6 +48,11 @@ public:
         return m_pair < other.m_pair;
     }
 
+    bool operator<=(const Skmer<kuint>& other) const
+    { 
+        return m_pair <= other.m_pair;
+    }
+
     friend std::ostream& operator<<(std::ostream& os, const Skmer<kuint>& p)
     {
         os << p.m_pair;
@@ -95,7 +100,7 @@ public:
         bool operator<=(const pair& other) const
         {
             if (m_value[1] == other.m_value[1])
-                return m_value[0] <= other.mvalue[0];
+                return m_value[0] <= other.m_value[0];
             else
                 return m_value[1] < other.m_value[1];
         }
