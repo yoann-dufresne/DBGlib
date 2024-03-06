@@ -67,7 +67,7 @@ public:
 		}
 
 		// Get the first one position
-		return uint_idx * 64UL + std::countr_zero<uint64_t>(value);
+		return uint_idx * 64UL + std::countr_zero(value);
 	}
 
 	void clear()

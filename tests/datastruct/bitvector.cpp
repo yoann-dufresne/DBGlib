@@ -335,4 +335,27 @@ TEST(bitvector_first_one, single_uint)
     ASSERT_EQ(bv.first_one(9), 16);
     ASSERT_EQ(bv.first_one(17), 32);
     ASSERT_EQ(bv.first_one(33), 1);
+    ASSERT_EQ(bv.first_one(63), 1);
+}
+
+TEST(bitvector_first_one, multiple_uints)
+{
+    Bitvector<1024> bv{};
+
+    // Set all the 2^i bits
+    for (uint64_t i{0} ; i<10 ; i++)
+        bv.set(1UL<<i);
+
+    ASSERT_EQ(bv.first_one(0), 1);
+    ASSERT_EQ(bv.first_one(2), 2);
+    ASSERT_EQ(bv.first_one(3), 4);
+    ASSERT_EQ(bv.first_one(5), 8);
+    ASSERT_EQ(bv.first_one(9), 16);
+    ASSERT_EQ(bv.first_one(17), 32);
+    ASSERT_EQ(bv.first_one(33), 64);
+    ASSERT_EQ(bv.first_one(65), 128);
+    ASSERT_EQ(bv.first_one(129), 256);
+    ASSERT_EQ(bv.first_one(257), 512);
+    ASSERT_EQ(bv.first_one(513), 1);
+    ASSERT_EQ(bv.first_one(1023), 1);
 }
