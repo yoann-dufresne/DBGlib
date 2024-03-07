@@ -20,6 +20,12 @@ struct LeftQuotienting
     {
         return QR<q, r>(value >> r, value);
     }
+
+    template<uint64_t q, uint64_t r>
+    static uint64_t recompose(const QR<q,r>& element)
+    {
+        return (element.quotient << r) | element.rest;
+    }
 };
 
 struct RightQuotienting
@@ -28,6 +34,12 @@ struct RightQuotienting
     static QR<q,r> compute(const uint64_t value)
     {
         return QR<q, r>(value, value >> q);
+    }
+
+    template<uint64_t q, uint64_t r>
+    static uint64_t recompose(const QR<q,r>& element)
+    {
+        return (element.rest << q) | element.quotient;
     }
 };
 

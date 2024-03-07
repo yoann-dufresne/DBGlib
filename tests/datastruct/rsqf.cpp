@@ -336,3 +336,40 @@ TEST(RSQF_get, triple_insertion)
         }
     }
 }
+
+TEST(RSQF_resize, resize_split_runs)
+{
+    QuotientFilter<7, 5, LeftQuotienting> filter{};
+
+    uint64_t values[] {
+        // Run in block 0
+        (2UL << 5) | 0b00101, (2UL << 5) | 0b10101,
+        // Run in block 1
+        (73UL << 5) | 0b00001, (73UL << 5) | 0b10100
+    };
+
+    for (uint64_t i{0} ; i<4 ; i++)
+        filter.insert(values[i]);
+
+    QuotientFilter<8, 4, LeftQuotienting> resized{filter};
+
+    ASSERT_EQ(filter.size(), resized.size());
+
+    for (uint64_t i{0} ; i<4 ; i++)
+    {
+        ASSERT_EQ(resized.get(values[i]), true);
+    }
+}
+
+
+    // // Run at the edge of blocks 0/1
+    // filter.insert((62UL << 5) | 0b00101);
+    // filter.insert((62UL << 5) | 0b01101);
+    // filter.insert((62UL << 5) | 0b10101);
+
+    // // Run in block 1
+    // filter.insert((74UL << 5) | 0b00101);
+    // filter.insert((74UL << 5) | 0b00001);
+    // filter.insert((74UL << 5) | 0b00101);
+    // // Collision in block 1
+    // filter.insert((75UL << 5) | 0b01001);

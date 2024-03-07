@@ -15,7 +15,7 @@ class QuotientFilter
 protected:
     // Number of blocks. Defined at compile time
     static constexpr uint64_t num_blocks {1UL << (q - 6)};
-    static constexpr uint64_t size {num_blocks * 64UL};
+    static constexpr uint64_t num_slots {num_blocks * 64UL};
 public:
     // Storage area of rests
     std::array<PackedBlock<r>, QuotientFilter::num_blocks> m_rests {};
@@ -26,7 +26,9 @@ public:
     // Offset vector : An offset value corresponds to the offset to the next slot that can corresponds to the current block.
     std::array<uint64_t, QuotientFilter::num_blocks> m_offsets {};
 
-    QuotientFilter()
+    uint64_t m_num_elements;
+
+    QuotientFilter() : m_num_elements(0)
     {
         static_assert(64 >= q + r);
         static_assert(q >= 6, "Minimum structure size is 64 elements => q must be larger or equal to 6");
@@ -36,27 +38,56 @@ public:
 
     /** Construct a filter from a half size one.
      **/
-    QuotientFilter(const QuotientFilter<q-1, r+1, Quotienting>& other)
+    QuotientFilter(const QuotientFilter<q-1, r+1, Quotienting>& other) : m_num_elements(0)
     {
         if (r == 0)
             throw std::runtime_error("Cannot create a QF with 0 bit size slots.");
+        if (other.m_num_elements == 0)
+            throw std::runtime_error("Cannot resize an empty filter.");
 
         // 0 - Get the position of the first run of the QF
-        const uint64_t first_occ {m_occupied.first_one(0)};
-        const uint64_t first_end {m_runend.first_one(m_offsets[0])};
+        const uint64_t first_occ {other.m_occupied.first_one(0)};
+        const uint64_t first_end {other.m_runend.first_one(other.m_offsets[0])};
 
         // 1 - Setup the first run for the loop
         uint64_t current_occ {first_occ};
         uint64_t current_end {first_end};
+        uint64_t first_after_last_run {other.m_offsets[0]};
         do {
-            cout << "run [" << current_occ << " ; " << current_end << "]" << endl;
+            // Decide which is the first slot of the run
+            uint64_t slot_idx {std::max(current_occ, first_after_last_run)};
+            // Only if we are at the edge of the filter
+            if (current_end < current_occ)
+                // If we are in the middle of the run after a toric loop
+                if (first_after_last_run < current_end)
+                    slot_idx = first_after_last_run;
+
             // 2 - Enumerates the rests in between run start and run end
+            for ( ; slot_idx!=((current_end+1)%num_slots) ; slot_idx++ )
+            {
+                // Apply toricity
+                if (slot_idx == num_slots)
+                    slot_idx = 0;
+
+                //                                                             slot_idx % 64
+                const QR<q-1,r+1> element {current_occ, other.m_rests[slot_idx/64UL].get(slot_idx & 0b111111)};
+                const uint64_t value {(Quotienting::template recompose<q-1,r+1>(element))};
+                // TODO: Change that to be more efficient
+                this->insert(value);
+            }
 
             // 3 - Go to the next run
-            current_occ = m_occupied.first_one((current_occ + 1) % size);
-            current_end = m_runend.first_one((current_end + 1) % size);
+            first_after_last_run = (current_end + 1) % num_slots;
+            current_occ = other.m_occupied.first_one((current_occ + 1) % num_slots);
+            current_end = other.m_runend.first_one((current_end + 1) % num_slots);
         }
         while (current_occ != first_occ);
+    }
+
+
+    uint64_t size() const
+    {
+        return m_num_elements;
     }
 
 
@@ -65,8 +96,6 @@ public:
      **/
     void insert(const uint64_t value)
     {
-        // TODO - Verify for resize
-
         // 0 - Compute the quotienting
         const QR<q,r> element {Quotienting::template compute<q,r>(value)};
 
@@ -93,6 +122,8 @@ public:
             // We changed block so offset has to be incremented
             m_offsets[current_block] += 1;
         }
+
+        m_num_elements += 1;
     }
 
 
@@ -137,7 +168,7 @@ public:
         else if (m_offsets[current_block] > current_relative_quotient)
         {
             // No opened runs in this block but remaining ones in the offset
-            current_runend_idx = (current_absolute_offset - 1) % size;
+            current_runend_idx = (current_absolute_offset - 1) % num_slots;
         }
         else
             return start_quotient;
@@ -159,10 +190,10 @@ public:
 
             if (local_occ_rank > 0)
                 // Jump to the runend corresponding to the number of runs in this block
-                current_runend_idx = m_runend.select((first_block_quotient + m_offsets[current_block]) % size, local_occ_rank);
+                current_runend_idx = m_runend.select((first_block_quotient + m_offsets[current_block]) % num_slots, local_occ_rank);
             else if (m_offsets[current_block] > current_relative_quotient)
                 // No opened runs in this block but remaining ones in the offset
-                current_runend_idx = (current_absolute_offset - 1) % size;
+                current_runend_idx = (current_absolute_offset - 1) % num_slots;
             else
                 return current_quotient;
 
@@ -181,13 +212,13 @@ public:
         const uint64_t first_block_quotient {block_idx * 64UL};
 
         // Rank the number of run stating in this block before the element theoritical position
-        const uint64_t block_runs {element.quotient == 0 ? 0 : m_occupied.rank(first_block_quotient, element.quotient)};
+        const uint64_t block_runs {element.quotient == 0 ? 0 : m_occupied.rank(first_block_quotient, element.quotient-1)};
         uint64_t real_insertion_slot {element.quotient};
 
         // If there are runs to jump over
         if (block_runs > 0)
         {
-            real_insertion_slot = (m_runend.select(m_offsets[block_idx], block_runs) + 1UL) % size;
+            real_insertion_slot = (m_runend.select(m_offsets[block_idx], block_runs) + 1UL) % num_slots;
         }
         // If there is an offset to jump over
         else if (m_offsets[block_idx] > (element.quotient % 64UL))
@@ -205,12 +236,12 @@ public:
                 // End of the run. Must insert here
                 if (m_runend.get(real_insertion_slot))
                 {
-                    return (real_insertion_slot + 1) % size;
+                    return (real_insertion_slot + 1) % num_slots;
                 }
 
                 // Not the right place for insertion
                 real_insertion_slot += 1;
-                if (real_insertion_slot == size)
+                if (real_insertion_slot == num_slots)
                     real_insertion_slot = 0;
             }
         }
@@ -306,7 +337,7 @@ public:
         // Inserted at the end of an existing run
         else if (insertion_idx == first_free_slot)
         {
-            m_runend.unset((insertion_idx + size - 1) % size);
+            m_runend.unset((insertion_idx + num_slots - 1) % num_slots);
             m_runend.set(insertion_idx);
         }
     }
