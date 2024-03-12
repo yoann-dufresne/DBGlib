@@ -22,7 +22,10 @@ TEST(Skmerator, init)
 
     uint64_t nb_skmer {0};
     for ([[maybe_unused]]km::Skmer<kuint> skmer : skmerator)
+    {
+        cout << skmer << endl;
         nb_skmer += 1;
+    }
  
     EXPECT_EQ(nb_skmer, 24);
 }

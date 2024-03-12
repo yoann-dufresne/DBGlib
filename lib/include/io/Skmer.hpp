@@ -24,14 +24,18 @@ public:
     struct pair;
 
     pair m_pair;
+    uint16_t m_pref_size;
+    uint16_t m_suff_size;
 
-    Skmer() : m_pair()
+    Skmer() : m_pair(), m_pref_size(0), m_suff_size(0)
     {}
-    Skmer(const pair& value) : m_pair(value)
+    Skmer(const pair& value) : m_pair(value), m_pref_size(0), m_suff_size(0)
     {}
-    Skmer(Skmer& other) : m_pair(other.m_pair)
+    Skmer(const pair& value, uint16_t prefix_size, uint16_t suffix_size) : m_pair(value), m_pref_size(prefix_size), m_suff_size(suffix_size)
     {}
-    Skmer(Skmer&& other) : m_pair(other.m_pair)
+    Skmer(Skmer& other) : m_pair(other.m_pair), m_pref_size(other.m_pref_size), m_suff_size(other.m_suff_size)
+    {}
+    Skmer(Skmer&& other) : m_pair(other.m_pair), m_pref_size(other.m_pref_size), m_suff_size(other.m_suff_size)
     {}
 
     Skmer<kuint>& operator= (const Skmer<kuint>& other)
@@ -55,7 +59,7 @@ public:
 
     friend std::ostream& operator<<(std::ostream& os, const Skmer<kuint>& p)
     {
-        os << p.m_pair;
+        os << p.m_pair << " pref:" << p.m_pref_size << " suff:" << p.m_suff_size;
         return os;
     }
 
@@ -200,7 +204,16 @@ public:
         
         friend std::ostream& operator<<(std::ostream& os, const typename Skmer<kuint>::pair& p)
         {
-            os << static_cast<uint64_t>(p.m_value[1]) << " " << static_cast<uint64_t>(p.m_value[0]);
+            // [kuint 1] Prints the bits one at a time from the most significant to the less significant
+            for (size_t idx{sizeof(kuint) * 8} ; idx>0 ; idx--)
+                os << ((static_cast<uint64_t>(p.m_value[1] >>  (idx - 1))) & 1);
+
+            os << " ";
+
+            // [kuint 2] Prints the bits one at a time from the most significant to the less significant
+            for (size_t idx{sizeof(kuint) * 8} ; idx>0 ; idx--)
+                os << ((static_cast<uint64_t>(p.m_value[0] >>  (idx - 1))) & 1);
+
             return os;
         }
 

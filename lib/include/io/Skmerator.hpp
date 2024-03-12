@@ -33,7 +33,7 @@ public:
     protected:
         // Construct an iterator without control on the file stream
         Iterator(FileSkmerator& skmerator, std::unique_ptr<klibpp::SeqStreamIn> stream_ptr)
-            : m_rator(skmerator), m_manip(skmerator.m_manip), m_ptr(std::move(stream_ptr))
+            : m_rator(skmerator), m_ptr(std::move(stream_ptr)), m_manip(skmerator.m_manip)
             , m_remaining_nucleotides(0), m_seq_idx(0)
         {
             if (m_ptr == nullptr)
