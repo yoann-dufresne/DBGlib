@@ -180,6 +180,14 @@ public:
             return *this;
         }
 
+        pair operator& (const uint64_t value)
+        {
+            pair p{*this};
+            p.m_value[0] &= value;
+            p.m_value[1] = 0;
+            return p;
+        }
+
         pair operator| (const pair& other) const
         {
             pair p{*this};
@@ -201,6 +209,12 @@ public:
             return *this;
         }
 
+
+        operator uint64_t()
+        {
+            return m_value[0];
+        }
+
         
         friend std::ostream& operator<<(std::ostream& os, const typename Skmer<kuint>::pair& p)
         {
@@ -212,7 +226,7 @@ public:
 
             // [kuint 2] Prints the bits one at a time from the most significant to the less significant
             for (size_t idx{sizeof(kuint) * 8} ; idx>0 ; idx--)
-                os << ((static_cast<uint64_t>(p.m_value[0] >>  (idx - 1))) & 1);
+                os << ((static_cast<uint64_t>(p.m_value[0] >> (idx - 1))) & 1);
 
             return os;
         }
@@ -324,8 +338,8 @@ public:
         return max_pair_value;
     }
 
-    // template<typename T>
-    // friend std::ostream& operator<<(std::ostream& os, SkmerManipulator<T>& manip);
+    template<typename T>
+    friend std::ostream& operator<<(std::ostream& os, SkmerManipulator<T>& manip);
 };
 
 
@@ -333,21 +347,38 @@ template<typename T>
 std::ostream& operator<<(std::ostream& os, SkmerManipulator<T>& manip)
 {
     static const char nucleotides[] = {'A', 'C', 'T', 'G'};
-    os << '[';
+    os << "[not interleaved: ";
 
-    // Forward
-    for (uint64_t idx{0} ; idx<manip.k ; idx++)
-        os << nucleotides[(manip.m_fwd.m_value >> (2 * idx)) & 0b11U];
-    os << '(' << manip.m_fwd.m_value << ") / ";
+    // Forward prefix
+    for (uint64_t pref_idx{0} ; pref_idx<manip.m_pref_size ; pref_idx++)
+    {
+        os << nucleotides[(manip.m_fwd_prefix_buff >> (4 * pref_idx)) & 0b11UL];
+    }
+    os << " ";
+    // Forward suffix
+    for (uint64_t suf_idx{manip.m_suff_size} ; suf_idx>0 ; suf_idx--)
+    {
+        os << nucleotides[(manip.m_fwd_suffix_buff >> (4 * suf_idx - 2)) & 0b11UL];
+    }
 
-    // Reverse
-    for (uint64_t idx{0} ; idx<manip.k ; idx++)
-        os << nucleotides[(manip.m_rev.m_value >> (2 * idx)) & 0b11U];
-    os << '('  << manip.m_rev.m_value << ")]";
+    os << " / ";
+
+    // Forward prefix
+    for (uint64_t pref_idx{0} ; pref_idx<manip.m_pref_size ; pref_idx++)
+    {
+        os << nucleotides[(manip.m_rev_prefix_buff >> (4 * pref_idx)) & 0b11UL];
+    }
+    os << " ";
+    // Forward suffix
+    for (uint64_t suf_idx{manip.m_suff_size} ; suf_idx>0 ; suf_idx--)
+    {
+        os << nucleotides[(manip.m_rev_suffix_buff >> (4 * suf_idx - 2)) & 0b11UL];
+    }
+
+    os << "]";
 
     return os;
 }
-
 
 };
 

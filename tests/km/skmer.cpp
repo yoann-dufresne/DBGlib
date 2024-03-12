@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <gtest/gtest.h>
 #include <string>
+#include <sstream>
 
 #include <io/Skmer.hpp>
 
@@ -61,4 +62,30 @@ TEST(SkmerManipulator, enumerate)
 
         idx += 1;
     }
+}
+
+
+TEST(SkmerManipulator, output)
+{
+    using kuint = uint16_t;
+    // using kpair = km::Skmer<kuint>::pair;
+    constexpr uint64_t k{5};
+    constexpr uint64_t m{2};
+
+    const string seq {"TCAAGCA"};
+    km::SkmerManipulator<kuint> manip {k, m};
+    km::Skmer<kuint> min_skmer {};
+
+    for (const auto& letter : seq)
+    {
+        kuint nucl {static_cast<kuint>((letter >> 1) & 0b11)};
+        min_skmer = manip.add_nucleotide(nucl);
+    }
+
+    stringstream ss {};
+    ss << manip;
+
+    string output = ss.str();
+
+    ASSERT_EQ(output, "[not interleaved: ATCA AGCA / TGCT TGAA]");
 }

@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 #include <string>
 
+#include <io/Skmer.hpp>
 #include <io/Skmerator.hpp>
 
 using namespace std;

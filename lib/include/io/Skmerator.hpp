@@ -40,12 +40,14 @@ public:
                 return;
 
             this->init_record();
+            cout << m_manip << endl;
+            // this->operator++();
 
-            const kuint nucl {(m_record.seq[m_seq_idx] >> 1) & 0b11U};
-            m_curr_min_skmer = m_manip.add_nucleotide(nucl);
+            // const kuint nucl {(m_record.seq[m_seq_idx] >> 1) & 0b11U};
+            // m_curr_min_skmer = m_manip.add_nucleotide(nucl);
 
-            m_remaining_nucleotides -= 1;
-            m_seq_idx += 1;
+            // m_remaining_nucleotides -= 1;
+            // m_seq_idx += 1;
         }
         
         // Construct a new file stream from the filename
@@ -55,6 +57,7 @@ public:
 
         void init_record()
         {
+            cout << "init_record" << endl;
             do
             {
                 if ((*m_ptr) >> m_record)
@@ -64,8 +67,7 @@ public:
                         continue;
                     }
 
-                    // Init the first kmer
-                    m_manip.init_skmer();
+                    // Init the first kmer                    m_manip.init_skmer();
                     for (m_seq_idx = 0 ; m_seq_idx<m_manip.k-1 ; m_seq_idx++)
                     {
                         // Nucl encoding. TODO: Move encoding to dedicated classes
@@ -89,8 +91,6 @@ public:
                     }
 
                     m_remaining_nucleotides = m_record.seq.length() - 2*m_manip.k + m_manip.m + 1;
-
-
                 }
                 else
                 {
@@ -100,6 +100,9 @@ public:
                 }
             }
             while (m_record.seq.length() < m_manip.k);
+            // cout << m_curr_min_skmer << endl;
+            cout << "/init_record" << endl;
+
         }
 
         friend class FileSkmerator;
