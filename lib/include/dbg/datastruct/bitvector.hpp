@@ -38,6 +38,38 @@ public:
 
 	Bitvector () {};
 
+	/** Get the position of the first bit set to 1, starting at position from. The search is toric.
+	 * @param from Bit position where to start the search.
+	 * @return The absolute position in the bitvector
+	 **/
+	uint64_t first_one(const uint64_t from) const
+	{
+		uint64_t mask {(~static_cast<uint64_t>(0)) << (from % 64UL)};
+		uint64_t uint_idx {from / 64UL};
+
+		// First uint check
+		uint64_t value {m_vector[uint_idx] & mask};
+		if (value == 0)
+		{
+			uint_idx += 1;
+			if (uint_idx == num_uint)
+				uint_idx = 0;
+			value = m_vector[uint_idx];
+		}
+
+		// Following uints
+		while (m_vector[uint_idx] == 0)
+		{
+			uint_idx += 1;
+			if (uint_idx == num_uint)
+				uint_idx = 0;
+			value = m_vector[uint_idx];
+		}
+
+		// Get the first one position
+		return uint_idx * 64UL + std::countr_zero(value);
+	}
+
 	void clear()
 	{
 		for (size_t i{0} ; i<m_vector.size() ; i++)
@@ -185,7 +217,7 @@ public:
 	static uint64_t select64 (const uint64_t vector, const uint64_t num_1s)
 	{
 		const uint64_t pdep_val {_pdep_u64(1ULL << (num_1s-1), vector)};
-		return _tzcnt_u64(pdep_val);
+		return std::countr_zero<uint64_t>(pdep_val);
 	}
 
 	/** Shift the bitvector 1 bit to the right. from and to are included positions. Left bit is 0.
