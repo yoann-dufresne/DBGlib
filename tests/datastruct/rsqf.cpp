@@ -361,6 +361,52 @@ TEST(RSQF_resize, resize_split_runs)
     }
 }
 
+TEST(RSQF_resize, resize_same_run)
+{
+    QuotientFilter<7, 5, LeftQuotienting> filter{};
+
+    uint64_t values[] {
+        // Run in block 0
+        (2UL << 5) | 0b00101, (2UL << 5) | 0b01101,
+        (2UL << 5) | 0b00001, (2UL << 5) | 0b00100
+    };
+
+    for (uint64_t i{0} ; i<4 ; i++)
+        filter.insert(values[i]);
+
+    QuotientFilter<8, 4, LeftQuotienting> resized{filter};
+
+    ASSERT_EQ(filter.size(), resized.size());
+
+    for (uint64_t i{0} ; i<4 ; i++)
+    {
+        ASSERT_EQ(resized.get(values[i]), true);
+    }
+}
+
+TEST(RSQF_resize, resize_overflow)
+{
+    QuotientFilter<7, 5, LeftQuotienting> filter{};
+
+    uint64_t values[] {
+        (127UL << 5) | 0b00101, // slot 127          then 254
+        (127UL << 5) | 0b11101, // slot 127 overflow then 255
+        (127UL << 5) | 0b10001  // slot 127 overflow then 255 overflow
+    };
+
+    for (uint64_t i{0} ; i<3 ; i++)
+        filter.insert(values[i]);
+
+    QuotientFilter<8, 4, LeftQuotienting> resized{filter};
+
+    ASSERT_EQ(filter.size(), resized.size());
+
+    for (uint64_t i{0} ; i<3 ; i++)
+    {
+        ASSERT_EQ(resized.get(values[i]), true);
+    }
+}
+
 
     // // Run at the edge of blocks 0/1
     // filter.insert((62UL << 5) | 0b00101);

@@ -12,11 +12,10 @@
 template<uint64_t q, uint64_t r, class Quotienting>
 class QuotientFilter
 {
-protected:
+public:
     // Number of blocks. Defined at compile time
     static constexpr uint64_t num_blocks {1UL << (q - 6)};
     static constexpr uint64_t num_slots {num_blocks * 64UL};
-public:
     // Storage area of rests
     std::array<PackedBlock<r>, QuotientFilter::num_blocks> m_rests {};
     // Occupied bitvector
@@ -45,6 +44,8 @@ public:
         if (other.m_num_elements == 0)
             throw std::runtime_error("Cannot resize an empty filter.");
 
+        static constexpr uint64_t other_num_slots {QuotientFilter<q-1, r+1, Quotienting>::num_slots};
+
         // 0 - Get the position of the first run of the QF
         const uint64_t first_occ {other.m_occupied.first_one(0)};
         const uint64_t first_end {other.m_runend.first_one(other.m_offsets[0])};
@@ -63,10 +64,10 @@ public:
                     slot_idx = first_after_last_run;
 
             // 2 - Enumerates the rests in between run start and run end
-            for ( ; slot_idx!=((current_end+1)%num_slots) ; slot_idx++ )
+            for ( ; slot_idx!=((current_end+1)%other_num_slots) ; slot_idx++ )
             {
                 // Apply toricity
-                if (slot_idx == num_slots)
+                if (slot_idx == other_num_slots)
                     slot_idx = 0;
 
                 //                                                             slot_idx % 64
@@ -77,9 +78,9 @@ public:
             }
 
             // 3 - Go to the next run
-            first_after_last_run = (current_end + 1) % num_slots;
-            current_occ = other.m_occupied.first_one((current_occ + 1) % num_slots);
-            current_end = other.m_runend.first_one((current_end + 1) % num_slots);
+            first_after_last_run = (current_end + 1) % other_num_slots;
+            current_occ = other.m_occupied.first_one((current_occ + 1) % other_num_slots);
+            current_end = other.m_runend.first_one((current_end + 1) % other_num_slots);
         }
         while (current_occ != first_occ);
     }
@@ -218,7 +219,7 @@ public:
         // If there are runs to jump over
         if (block_runs > 0)
         {
-            real_insertion_slot = (m_runend.select(m_offsets[block_idx], block_runs) + 1UL) % num_slots;
+            real_insertion_slot = (m_runend.select(first_block_quotient + m_offsets[block_idx], block_runs) + 1UL) % num_slots;
         }
         // If there is an offset to jump over
         else if (m_offsets[block_idx] > (element.quotient % 64UL))
