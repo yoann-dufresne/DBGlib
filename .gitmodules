@@ -1,3 +1,6 @@
 [submodule "thirdparty/kseqpp"]
 	path = thirdparty/kseqpp
 	url = https://github.com/cartoonist/kseqpp.git
+[submodule "thirdparty/cxxopts"]
+	path = thirdparty/cxxopts
+	url = https://github.com/jarro2783/cxxopts.git
