@@ -9,7 +9,7 @@
 #ifndef QUOTIENT_FILTER_H
 #define QUOTIENT_FILTER_H
 
-template<uint64_t q, uint64_t r, class Quotienting>
+template<uint64_t q, uint64_t r, class Quotienting = LeftQuotienting>
 class QuotientFilter
 {
 public:
