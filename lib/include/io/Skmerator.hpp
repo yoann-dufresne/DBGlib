@@ -30,14 +30,19 @@ public:
 
     struct Iterator
     {
+    public:
+        ~Iterator()
+        {
+            delete[] m_skmer_buffer_array;
+        }
     protected:
         // Construct an iterator without control on the file stream
         Iterator(FileSkmerator& skmerator, std::unique_ptr<klibpp::SeqStreamIn> stream_ptr)
             : m_rator(skmerator), m_ptr(std::move(stream_ptr)), m_manip(skmerator.m_manip)
-            , m_remaining_nucleotides(0), m_seq_idx(0)
-            , m_skmer_buffer_array(new Skmer<kuint>[skmerator.m_manip.k - skmerator.m_manip.m + 1])
-            , m_ptr_start(0), m_ptr_stop(skmerator.m_manip.k - skmerator.m_manip.m)
-            , m_min_pos(0)
+            , m_remaining_nucleotides(0), m_buffer_size(2 * skmerator.m_manip.k - skmerator.m_manip.m)
+            , m_skmer_buffer_array(new Skmer<kuint>[m_buffer_size])
+            , m_ptr_begin(0), m_ptr_end(skmerator.m_manip.k - skmerator.m_manip.m)
+            , m_min_current(0)
         {
             if (m_ptr == nullptr)
                 return;
@@ -51,11 +56,6 @@ public:
 
             // m_remaining_nucleotides -= 1;
             // m_seq_idx += 1;
-        }
-        
-        ~Iterator()
-        {
-            delete[] m_skmer_buffer_array;
         }
 
         // Construct a new file stream from the filename
@@ -76,30 +76,18 @@ public:
                     }
 
                     // Init the first kmer                    m_manip.init_skmer();
-                    for (m_seq_idx = 0 ; m_seq_idx<m_manip.k-1 ; m_seq_idx++)
+                    for (uint64_t idx = 0 ; idx<m_manip.k-1 ; idx++)
                     {
                         // Nucl encoding. TODO: Move encoding to dedicated classes
-                        const kuint nucl {(m_record.seq[m_seq_idx] >> 1) & 0b11U};
+                        const kuint nucl {(m_record.seq[idx] >> 1) & 0b11U};
                         m_manip.add_nucleotide(nucl);
                     }
 
                     m_curr_min_skmer = m_manip.get_max();
-                    // while the skmer length is < than the one of the full max superkmer
-                    for(uint64_t i {m_manip.k}; i <= (2*m_manip.k - m_manip.m); i++)
-                    {
-                        // add nucleotide to the superkmer
-                        const kuint nucl {(m_record.seq[m_seq_idx] >> 1) & 0b11U};
-                        const Skmer<kuint> candidate {m_manip.add_nucleotide(nucl)};
 
-                        // fill the buffer with the new skmer candidate
-                        m_skmer_buffer_array[i - m_manip.k] = candidate;
-
-                        // remember the minimal candidate skmer in the array
-                        if (candidate <= m_skmer_buffer_array[m_min_pos]){
-                            m_min_pos = i - m_manip.k;
-                        }
-
-                    }
+                    m_ptr_begin = m_rator.m_manip.k - 2;
+                    m_ptr_end = m_rator.m_manip.k - 2;
+                    m_min_current = m_rator.m_manip.k - 2;
                     m_remaining_nucleotides = m_record.seq.length() - 2*m_manip.k + m_manip.m + 1;
                 }
                 else
@@ -138,46 +126,63 @@ public:
                 if (m_ptr == nullptr)
                     return *this;
             }
+            
+            const uint64_t k {m_rator.m_manip.k};
+            const uint64_t m {m_rator.m_manip.m};
+
 
             while (m_remaining_nucleotides > 0)
-            {
-                // increment the position in the buffer
-                m_ptr_stop = (m_ptr_stop + 1) % ( m_manip.k - m_manip.m + 1);
-                
-                // out of context case
-                if (m_ptr_start == m_ptr_stop)
+            {                
+                // out of context case (the suffix of the skmer is not large enought to hold the minimizer)
+                if (m_ptr_end - m_min_current >= k - m)
                 {
                     // store the previous skmer
-                    m_rator.m_prev_min_skmer = m_skmer_buffer_array[m_min_pos];
+                    m_rator.m_prev_min_skmer = m_skmer_buffer_array[ m_min_current % m_buffer_size ];
 
                     //move the beginning to the new position
-                    m_ptr_start = m_min_pos + m_manip.k - m_manip.m;
+                    m_ptr_begin = m_min_current + 1;
 
                     //compute the new minimal skmer in the remaining skmers
-                    
+                    m_curr_min_skmer = m_manip.get_max();
+                    for(uint64_t abs_pos {m_ptr_begin}; abs_pos <= m_ptr_end; abs_pos++)
+                    {
+                        if (m_skmer_buffer_array[abs_pos % m_buffer_size] <= m_curr_min_skmer)
+                        {
+                            m_curr_min_skmer = m_skmer_buffer_array[abs_pos % m_buffer_size];
+                            m_min_current = abs_pos;
+                        }
+                    }
 
+                    break;
                 }
 
-
-                m_seq_idx += 1;
                 m_remaining_nucleotides -= 1;
+                m_ptr_end += 1;
+
                 // Get the next kmer
-                const kuint nucl {(m_record.seq[m_seq_idx] >> 1) & 0b11U};
+                const kuint nucl {(m_record.seq[m_ptr_end] >> 1) & 0b11U};
                 
                 // add nucleotide to the current candidate superkmer
                 Skmer<kuint> candidate {m_manip.add_nucleotide(nucl)};
+                m_skmer_buffer_array[ m_ptr_end % m_buffer_size ] = candidate;
+                
 
                 // If there is a new minimal superkmer
-                if (candidate <= m_curr_min_skmer){ // USE <= !!
+                if (candidate < m_curr_min_skmer){
 
-                    // registering the current minimal skmer to yield it
-                    m_rator.m_prev_min_skmer = m_curr_min_skmer;
+                    // out of context (suffix to large to hold the minimizer)
+                    if ( m_ptr_end - m_ptr_begin > k - m)
+                    {
+                        // registering the current minimal skmer to yield it
+                        m_rator.m_prev_min_skmer = m_curr_min_skmer;
 
-                    // update the boundaries of the superkmer to be yielded
-
+                        // update the boundaries of the superkmer to be yielded
+                        m_ptr_begin = m_min_current + 1;
+                    }
 
                     // save the new current minimal skmer
                     m_curr_min_skmer = candidate;
+                    m_min_current = m_ptr_end;
 
                     break;
                 }
@@ -203,11 +208,11 @@ public:
         Skmer<kuint> m_curr_min_skmer;
         klibpp::KSeq m_record;
         uint64_t m_remaining_nucleotides;
-        uint64_t m_seq_idx;
+        const uint64_t m_buffer_size;
         Skmer<kuint>* m_skmer_buffer_array;
-        uint64_t m_ptr_start;
-        uint64_t m_ptr_stop;
-        uint64_t m_min_pos;
+        uint64_t m_ptr_begin;
+        uint64_t m_ptr_end;
+        uint64_t m_min_current;
     };
     
 
