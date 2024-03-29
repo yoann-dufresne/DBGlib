@@ -8,10 +8,10 @@ using namespace std;
 int main(int argc, char const *argv[])
 {
     // --- Init options ---
-    cxxopts::Options options("rsqf", "Example usage of rsqf datastructure for kmers");
+    cxxopts::Options options("rsqf", "Example usages of rsqf datastructure for kmers. During exec a minimal size RSQF is created and filled.");
     options.add_options()
         ("k", "kmer size [mandatory]", cxxopts::value<uint64_t>())
-        ("f,fasta", "Fasta file name", cxxopts::value<std::string>())
+        ("f,fasta", "Fasta file to index", cxxopts::value<std::string>())
         ("v,verbose", "Verbose output", cxxopts::value<bool>()->default_value("false"))
         ("h,help", "Print usage")
     ;
@@ -35,6 +35,13 @@ int main(int argc, char const *argv[])
 
     // --- Program begin ---
 
-    cout << "Enumeration of kmers of size " << result["k"].as<uint64_t>() << endl;
+    cout << "Enumeration of kmers of size " << result["k"].as<uint64_t>();
+    cout << " to create the index." << endl;
+
+    // Index creation
+    
+
+    // Query the index
+
     return 0;
 }

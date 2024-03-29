@@ -91,6 +91,28 @@ public:
         return m_num_elements;
     }
 
+    /** True if the maximum capacity of the QF has been reached
+     **/
+    bool max_capacity() const
+    {
+        return static_cast<double>(m_num_elements) / static_cast<double>(num_slots) > .95;
+    }
+
+
+    uint64_t * insert(const uint64_t * begin, const uint64_t * end)
+    {
+        for (uint64_t * element = begin ; element != end ; element++)
+        {
+            // If max capacity reached stop the insertion here and return the next pointer
+            if (max_capacity())
+                return element;
+            // Insert the element
+            this->insert(*element);
+        }
+
+        return end;
+    }
+
 
     /** Insert an element in the RSQF.
      * @param element The element to insert that is splitted into quotient and value
