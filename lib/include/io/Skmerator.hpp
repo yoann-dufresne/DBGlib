@@ -109,11 +109,13 @@ public:
         // Return kmer by value
         Skmer<kuint> operator*() const
         {
+            cout << "operator*" << endl;
             return m_rator.m_prev_min_skmer;
         }
 
         Iterator& operator++()
         {
+            cout << "operator++" << endl;
             // File already consumed
             if (m_ptr == nullptr)
                 return *this;
@@ -157,7 +159,7 @@ public:
                     }
                     cout << "b: " << m_ptr_begin << " ; m: " << m_min_current << " ; e: " << m_ptr_end << endl;
                     cout << "Yielding OCC end-curr >= k - m" << endl;
-                    break;
+                    return *this;
                 }
 
                 m_remaining_nucleotides -= 1;
@@ -180,6 +182,7 @@ public:
                     {
                         // registering the current minimal skmer to yield it
                         m_rator.m_prev_min_skmer = m_curr_min_skmer;
+                        // cout << "manip: " << m_rator << endl;
 
                         // update the boundaries of the superkmer to be yielded
                         m_ptr_begin = m_min_current + 1;
@@ -190,7 +193,7 @@ public:
                         
                         cout << "b: " << m_ptr_begin << " ; m: " << m_min_current << " ; e: " << m_ptr_end << endl;
                         cout << "Yielding OCC end-beg > k - m" << endl;
-                        break;
+                        return *this;
                     }
 
                     // save the new current minimal skmer
@@ -202,7 +205,7 @@ public:
             }
 
             // We reached the end of the sequence
-            //m_rator.m_prev_min_skmer = m_curr_min_skmer;
+            m_rator.m_prev_min_skmer = m_curr_min_skmer;
 
             return *this;
         }

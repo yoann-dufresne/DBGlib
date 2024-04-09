@@ -22,6 +22,7 @@ TEST(Skmerator, two_nucleotides)
 
     km::SkmerManipulator<kuint> manip {5,2};
     km::FileSkmerator<kuint> skmerator {fa3, manip};
+    km::SkmerPrettyPrinter<kuint> pp {5, 2};
 
     //const kuint expected_values[5] { 0b0000010100000111, 0b00010100001101011, 0b0001010001110011, 0b00010101011001111, 0b0000110111001101 };
 
@@ -31,7 +32,8 @@ TEST(Skmerator, two_nucleotides)
     uint64_t nb_skmer {0};
     for ([[maybe_unused]]km::Skmer<kuint> skmer : skmerator)
     {
-        cout << manip << endl;
+        pp << &skmer;
+        cout << pp << endl;
         //EXPECT_EQ(expected_values[nb_skmer], manip.m_fwd.m_pair);
         nb_skmer += 1;
     }

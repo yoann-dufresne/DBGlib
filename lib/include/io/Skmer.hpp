@@ -237,6 +237,54 @@ public:
 
 
 template<typename kuint>
+class SkmerPrettyPrinter
+{
+public:
+    Skmer<kuint>* m_skmer;
+    uint64_t k;
+    uint64_t m;
+    uint64_t sk_size;
+    uint64_t m_suff_size;
+    uint64_t m_pref_size;
+
+    SkmerPrettyPrinter(uint64_t k, uint64_t m): k(k), m(m)
+                    , sk_size(2*k-m), m_suff_size(sk_size / 2), m_pref_size((sk_size+1) / 2)
+    {};
+
+    SkmerPrettyPrinter& operator<< (Skmer<kuint>* skmer)
+    {
+        m_skmer = skmer;
+        return *this;
+    }
+
+};
+
+template<typename kuint>
+std::ostream& operator<<(std::ostream& os, const SkmerPrettyPrinter<kuint> pp)
+{
+    static const char nucleotides[] = {'A', 'C', 'T', 'G'};
+    os << "[skmer not interleaved: ";
+
+    // Forward prefix
+    for (uint64_t pref_idx{0} ; pref_idx<pp.m_pref_size ; pref_idx++)
+    {
+        os << nucleotides[((*pp.m_skmer).m_pair >> (4 * pref_idx)) & 0b11UL];
+    }
+    os << " ";
+    // Forward suffix
+    for (uint64_t suf_idx{pp.m_suff_size} ; suf_idx>0 ; suf_idx--)
+    {
+        os << nucleotides[((*pp.m_skmer).m_pair >> (4 * suf_idx - 2)) & 0b11UL];
+    }
+
+    os << "]";
+
+    return os;
+}
+
+
+
+template<typename kuint>
 class SkmerManipulator
 {
 public:
@@ -363,13 +411,13 @@ std::ostream& operator<<(std::ostream& os, SkmerManipulator<T>& manip)
 
     os << " / ";
 
-    // Forward prefix
+    // Reverse prefix
     for (uint64_t pref_idx{0} ; pref_idx<manip.m_pref_size ; pref_idx++)
     {
         os << nucleotides[(manip.m_rev_prefix_buff >> (4 * pref_idx)) & 0b11UL];
     }
     os << " ";
-    // Forward suffix
+    // Reverse suffix
     for (uint64_t suf_idx{manip.m_suff_size} ; suf_idx>0 ; suf_idx--)
     {
         os << nucleotides[(manip.m_rev_suffix_buff >> (4 * suf_idx - 2)) & 0b11UL];
