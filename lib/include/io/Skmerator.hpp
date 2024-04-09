@@ -85,10 +85,10 @@ public:
 
                     m_curr_min_skmer = m_manip.get_max();
 
-                    m_ptr_begin = m_rator.m_manip.k - 2;
+                    m_ptr_begin = m_rator.m_manip.k - 1;
                     m_ptr_end = m_rator.m_manip.k - 2;
                     m_min_current = m_rator.m_manip.k - 2;
-                    m_remaining_nucleotides = m_record.seq.length() - 2*m_manip.k + m_manip.m + 1;
+                    m_remaining_nucleotides = m_record.seq.length() - m_manip.k + 1;
                 }
                 else
                 {
@@ -118,21 +118,24 @@ public:
             if (m_ptr == nullptr)
                 return *this;
 
+            const uint64_t k {m_rator.m_manip.k};
+            const uint64_t m {m_rator.m_manip.m};
+
             // Go to next sequence
-            if (m_remaining_nucleotides == 0)
+            if (m_remaining_nucleotides + k - m == 0)
             {
+                cout << "remaining_nucleotides: " << m_remaining_nucleotides << " ; k: " << k << " ; m: " << m << endl;
                 this->init_record();
                 // reached the end of the file while looking for the next sequence
                 if (m_ptr == nullptr)
                     return *this;
             }
-            
-            const uint64_t k {m_rator.m_manip.k};
-            const uint64_t m {m_rator.m_manip.m};
 
 
-            while (m_remaining_nucleotides > 0)
+            while (m_remaining_nucleotides + k - m > 0)
             {                
+                cout << "seq position: " << (m_ptr_end+1) << " ; rem_nuc " << m_remaining_nucleotides << endl;
+
                 // out of context case (the suffix of the skmer is not large enought to hold the minimizer)
                 if (m_ptr_end - m_min_current >= k - m)
                 {
@@ -152,15 +155,17 @@ public:
                             m_min_current = abs_pos;
                         }
                     }
-
+                    cout << "b: " << m_ptr_begin << " ; m: " << m_min_current << " ; e: " << m_ptr_end << endl;
+                    cout << "Yielding OCC end-curr >= k - m" << endl;
                     break;
                 }
 
                 m_remaining_nucleotides -= 1;
                 m_ptr_end += 1;
 
-                // Get the next kmer
-                const kuint nucl {(m_record.seq[m_ptr_end] >> 1) & 0b11U};
+                // Get the next kmer 
+                // If we reach the end of the sequence we add fake nucleotides (0b11) to complete the last skmer  
+                const kuint nucl { m_remaining_nucleotides >= 0 ? ((m_record.seq[m_ptr_end] >> 1) & 0b11UL) : 0b11UL};
                 
                 // add nucleotide to the current candidate superkmer
                 Skmer<kuint> candidate {m_manip.add_nucleotide(nucl)};
@@ -170,7 +175,7 @@ public:
                 // If there is a new minimal superkmer
                 if (candidate < m_curr_min_skmer){
 
-                    // out of context (suffix to large to hold the minimizer)
+                    // out of context 
                     if ( m_ptr_end - m_ptr_begin > k - m)
                     {
                         // registering the current minimal skmer to yield it
@@ -178,19 +183,26 @@ public:
 
                         // update the boundaries of the superkmer to be yielded
                         m_ptr_begin = m_min_current + 1;
+                        
+                        // save the new current minimal skmer
+                        m_curr_min_skmer = candidate;
+                        m_min_current = m_ptr_end;
+                        
+                        cout << "b: " << m_ptr_begin << " ; m: " << m_min_current << " ; e: " << m_ptr_end << endl;
+                        cout << "Yielding OCC end-beg > k - m" << endl;
+                        break;
                     }
 
                     // save the new current minimal skmer
                     m_curr_min_skmer = candidate;
                     m_min_current = m_ptr_end;
 
-                    break;
                 }
 
             }
 
             // We reached the end of the sequence
-            m_rator.m_prev_min_skmer = m_curr_min_skmer;
+            //m_rator.m_prev_min_skmer = m_curr_min_skmer;
 
             return *this;
         }
@@ -207,7 +219,7 @@ public:
         SkmerManipulator<kuint>& m_manip;
         Skmer<kuint> m_curr_min_skmer;
         klibpp::KSeq m_record;
-        uint64_t m_remaining_nucleotides;
+        int64_t m_remaining_nucleotides;
         const uint64_t m_buffer_size;
         Skmer<kuint>* m_skmer_buffer_array;
         uint64_t m_ptr_begin;
