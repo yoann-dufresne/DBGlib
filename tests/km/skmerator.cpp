@@ -19,12 +19,20 @@ static const std::string fa3 {"../tests/data/fasta3.fa"};
 TEST(Skmerator, two_nucleotides)
 {
     using kuint = uint16_t;
+    const uint64_t k{5};
+    const uint64_t m{2};
 
-    km::SkmerManipulator<kuint> manip {5,2};
+    km::SkmerManipulator<kuint> manip {k, m};
     km::FileSkmerator<kuint> skmerator {fa3, manip};
-    km::SkmerPrettyPrinter<kuint> pp {5, 2};
+    km::SkmerPrettyPrinter<kuint> pp {k, m};
 
-    //const kuint expected_values[5] { 0b0000010100000111, 0b00010100001101011, 0b0001010001110011, 0b00010101011001111, 0b0000110111001101 };
+    //                         Prefix:          C   C   C   C             A   C   C   C             A   A   C   C
+    //                         Suffix:            A   _   _   _             A   _   _   _             A   A   _   _
+    const kuint expected_values[][2] { {0, 0b000100011101110111U}, {0, 0b0000011101110111U}, {0, 0b0000000001110111U},
+    //                                        A   A   A   A
+    //                                          A   _   _   _
+                                       {0, 0b0000001100110011U}
+    };
 
     // FOR FASTA_3 WE EXPECT
     //const kuint expected_values_fa3[2] {0b}

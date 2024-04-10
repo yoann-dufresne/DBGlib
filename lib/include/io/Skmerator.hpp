@@ -199,7 +199,6 @@ public:
                     // save the new current minimal skmer
                     m_curr_min_skmer = candidate;
                     m_min_current = m_ptr_end;
-
                 }
 
             }
@@ -209,6 +208,7 @@ public:
 
             return *this;
         }
+
 
         bool operator==(const Iterator& it) const
         {
