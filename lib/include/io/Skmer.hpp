@@ -1,4 +1,6 @@
-
+#include <cstdint>
+#include <ostream>
+#include <assert.h>
 
 #ifndef SKMER_H
 #define SKMER_H
@@ -337,6 +339,10 @@ public:
         m_rev = Skmer<kuint>{};
     }
 
+    /** Add a binarized nucleotide (2bits) to the current skmer.
+     * @param nucl a 2-bits binarized nucleotide according the current encoding. Warning: The nucleotide is not checked before insertion, so it can destroy the skmer if not correctly formated.
+     * @return The current canonical skmer according to the interleaved order.
+     **/
     inline Skmer<kuint>& add_nucleotide(const kuint nucl)
     {
         // --- forward prefix ---
@@ -362,6 +368,8 @@ public:
         m_fwd_suffix_buff |= nucl << 2;
         // Remove the transfered nucleotide
         m_fwd_suffix_buff &= m_mask;
+        cout << "nucl " << static_cast<uint64_t>(nucl) << endl;
+        cout << "construction " << m_fwd_suffix_buff << endl;
 
         // --- reverse prefix ---
         // Shift the prefix
@@ -395,18 +403,22 @@ template<typename T>
 std::ostream& operator<<(std::ostream& os, SkmerManipulator<T>& manip)
 {
     static const char nucleotides[] = {'A', 'C', 'T', 'G'};
+    
+    cout << manip.m_fwd_suffix_buff << endl;
+    cout << manip.m_fwd_prefix_buff << endl;
+    
     os << "[not interleaved: ";
 
     // Forward prefix
     for (uint64_t pref_idx{0} ; pref_idx<manip.m_pref_size ; pref_idx++)
     {
-        os << nucleotides[(manip.m_fwd_prefix_buff >> (4 * pref_idx)) & 0b11UL];
+        os << (nucleotides[(manip.m_fwd_prefix_buff >> (4 * pref_idx)) & 0b11UL]);
     }
     os << " ";
     // Forward suffix
     for (uint64_t suf_idx{manip.m_suff_size} ; suf_idx>0 ; suf_idx--)
     {
-        os << nucleotides[(manip.m_fwd_suffix_buff >> (4 * suf_idx - 2)) & 0b11UL];
+        os << (nucleotides[(manip.m_fwd_suffix_buff >> (4 * suf_idx - 2)) & 0b11UL]);
     }
 
     os << " / ";

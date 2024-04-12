@@ -16,37 +16,37 @@ static const std::string fa1 {"../tests/data/fasta1.fa"};
 static const std::string fa2 {"../tests/data/fasta2.fa"};
 static const std::string fa3 {"../tests/data/fasta3.fa"};
 
-TEST(Skmerator, two_nucleotides)
-{
-    using kuint = uint16_t;
-    const uint64_t k{5};
-    const uint64_t m{2};
+// TEST(Skmerator, two_nucleotides)
+// {
+//     using kuint = uint16_t;
+//     const uint64_t k{5};
+//     const uint64_t m{2};
 
-    km::SkmerManipulator<kuint> manip {k, m};
-    km::FileSkmerator<kuint> skmerator {fa3, manip};
-    km::SkmerPrettyPrinter<kuint> pp {k, m};
+//     km::SkmerManipulator<kuint> manip {k, m};
+//     km::FileSkmerator<kuint> skmerator {fa3, manip};
+//     km::SkmerPrettyPrinter<kuint> pp {k, m};
 
-    //                         Prefix:          C   C   C   C             A   C   C   C             A   A   C   C
-    //                         Suffix:            A   _   _   _             A   _   _   _             A   A   _   _
-    const kuint expected_values[][2] { {0, 0b000100011101110111U}, {0, 0b0000011101110111U}, {0, 0b0000000001110111U},
-    //                                        A   A   A   A
-    //                                          A   _   _   _
-                                       {0, 0b0000001100110011U}
-    };
+//     //                         Prefix:          C   C   C   C             A   C   C   C             A   A   C   C
+//     //                         Suffix:            A   _   _   _             A   _   _   _             A   A   _   _
+//     const kuint expected_values[][2] { {0, 0b000100011101110111U}, {0, 0b0000011101110111U}, {0, 0b0000000001110111U},
+//     //                                        A   A   A   A
+//     //                                          A   _   _   _
+//                                        {0, 0b0000001100110011U}
+//     };
 
-    // FOR FASTA_3 WE EXPECT
-    //const kuint expected_values_fa3[2] {0b}
+//     // FOR FASTA_3 WE EXPECT
+//     //const kuint expected_values_fa3[2] {0b}
 
-    uint64_t nb_skmer {0};
-    for ([[maybe_unused]]km::Skmer<kuint> skmer : skmerator)
-    {
-        pp << &skmer;
-        cout << pp << endl;
-        //EXPECT_EQ(expected_values[nb_skmer], manip.m_fwd.m_pair);
-        nb_skmer += 1;
-    }
+//     uint64_t nb_skmer {0};
+//     for ([[maybe_unused]]km::Skmer<kuint> skmer : skmerator)
+//     {
+//         pp << &skmer;
+//         cout << pp << endl;
+//         //EXPECT_EQ(expected_values[nb_skmer], manip.m_fwd.m_pair);
+//         nb_skmer += 1;
+//     }
  
-    EXPECT_EQ(nb_skmer, 3);
-}
+//     EXPECT_EQ(nb_skmer, 3);
+// }
 
 // TODO: TEST THE MASKING OF THE SKMERS

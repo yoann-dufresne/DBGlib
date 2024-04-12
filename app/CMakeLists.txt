@@ -3,12 +3,12 @@ set(EXEC_NAME "dbg")
 file(GLOB_RECURSE DBG_SOURCES "*.cpp")
 add_executable(${EXEC_NAME} ${DBG_SOURCES})
 
-target_compile_features(${EXEC_NAME} PUBLIC cxx_std_17)
+target_compile_features(${EXEC_NAME} PUBLIC cxx_std_20)
 target_link_libraries(${EXEC_NAME} PUBLIC
+  dbglib
   $<BUILD_INTERFACE:build_type_flags>
   $<BUILD_INTERFACE:warning_flags>
   $<BUILD_INTERFACE:asan_flags>
-  dbglib
 )
 
 if (STATIC_BUILD)
