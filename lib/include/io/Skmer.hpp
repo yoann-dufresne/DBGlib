@@ -368,8 +368,6 @@ public:
         m_fwd_suffix_buff |= nucl << 2;
         // Remove the transfered nucleotide
         m_fwd_suffix_buff &= m_mask;
-        cout << "nucl " << static_cast<uint64_t>(nucl) << endl;
-        cout << "construction " << m_fwd_suffix_buff << endl;
 
         // --- reverse prefix ---
         // Shift the prefix
@@ -390,14 +388,17 @@ public:
             return m_fwd;
     }
 
-    Skmer<kuint> get_max() const{
-        return max_pair_value;
-    }
-
-    kuint minimizer() const{
+    kuint minimizer() const {
         return std::min(
             static_cast<kuint>(m_fwd.m_pair >> (4*(k-m))),
             static_cast<kuint>(m_rev.m_pair >> (4*(k-m)))
+        );
+    }
+
+    kuint minimizer(const Skmer<kuint> skmer) const {
+        return std::min(
+            static_cast<kuint>(skmer.m_fwd.m_pair >> (4*(k-m))),
+            static_cast<kuint>(skmer.m_rev.m_pair >> (4*(k-m)))
         );
     }
 
@@ -411,8 +412,8 @@ std::ostream& operator<<(std::ostream& os, SkmerManipulator<T>& manip)
 {
     static const char nucleotides[] = {'A', 'C', 'T', 'G'};
     
-    cout << manip.m_fwd_suffix_buff << endl;
-    cout << manip.m_fwd_prefix_buff << endl;
+    // cout << manip.m_fwd_suffix_buff << endl;
+    // cout << manip.m_fwd_prefix_buff << endl;
     
     os << "[not interleaved: ";
 
