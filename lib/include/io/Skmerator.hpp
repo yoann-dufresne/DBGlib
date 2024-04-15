@@ -163,7 +163,7 @@ public:
                         }
                     }
                     // cout << "b: " << m_ptr_begin << " ; m: " << m_ptr_min << " ; e: " << m_ptr_end << endl;
-                    // cout << "Yielding OCC end-curr >= k - m" << endl;
+                    cout << "Yielding OCC end-curr >= k - m" << endl;
                     return *this;
                 }
 
@@ -174,6 +174,7 @@ public:
                 // If we reach the end of the sequence we add fake nucleotides (0b11) to complete the last skmer  
                 const kuint nucl {
                     m_remaining_nucleotides >= 0 ?(static_cast<kuint>((m_record.seq[m_ptr_end] >> 1) & 0b11U)) : static_cast<kuint>(0b11U)};
+                cout << "b: " << m_ptr_begin << " ; m: " << m_ptr_min << " ; e: " << m_ptr_end << endl;
                 
                 // add nucleotide to the current candidate superkmer
                 Skmer<kuint> candidate {m_manip.add_nucleotide(nucl)};
@@ -181,6 +182,7 @@ public:
                 
 
                 const kuint candidate_minimizer {m_manip.minimizer(candidate)};
+                cout << "candidate_minimizer: " << candidate_minimizer << " m_current_minimizer: " << m_current_minimizer << endl;
 
                 // If there is a new minimal superkmer
                 if (candidate_minimizer < m_current_minimizer){
@@ -200,7 +202,6 @@ public:
                         m_ptr_begin = m_ptr_min + 1;
                         
                         // save the new current minimal skmer
-                        m_current_minimizer = candidate_minimizer;
                         m_ptr_min = m_ptr_end;
                         
                         // cout << "b: " << m_ptr_begin << " ; m: " << m_ptr_min << " ; e: " << m_ptr_end << endl;
@@ -211,6 +212,7 @@ public:
                     }
 
                     // save the new current minimal skmer
+                    m_current_minimizer = candidate_minimizer;
                     m_ptr_min = m_ptr_end;
                 }
 
