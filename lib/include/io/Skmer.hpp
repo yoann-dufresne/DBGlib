@@ -394,6 +394,13 @@ public:
         return max_pair_value;
     }
 
+    kuint minimizer() const{
+        return std::min(
+            static_cast<kuint>(m_fwd.m_pair >> (4*(k-m))),
+            static_cast<kuint>(m_rev.m_pair >> (4*(k-m)))
+        );
+    }
+
     template<typename T>
     friend std::ostream& operator<<(std::ostream& os, SkmerManipulator<T>& manip);
 };

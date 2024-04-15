@@ -174,8 +174,13 @@ public:
                 m_skmer_buffer_array[ m_ptr_end % m_buffer_size ] = candidate;
                 
 
+                const kuint candidate_minimizer {candidate.minimizer()};
+                const kuint current_minimizer {m_curr_min_skmer.minimizer()};
+
                 // If there is a new minimal superkmer
-                if (candidate < m_curr_min_skmer){
+                if (candidate_minimizer < current_minimizer){
+
+                    
 
                     // out of context 
                     if ( m_ptr_end - m_ptr_begin > k - m)

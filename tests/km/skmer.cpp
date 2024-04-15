@@ -145,3 +145,32 @@ TEST(SkmerManipulator, output)
 
     ASSERT_EQ(output, "[not interleaved: ATCA AGCA / TGCT TGAA]");
 }
+
+TEST(SkmerManipulator, minimizer_extraction)
+{
+    using kuint = uint16_t;
+    // using kpair = km::Skmer<kuint>::pair;
+    constexpr uint64_t k{5};
+    constexpr uint64_t m{2};
+
+    const string seq {"TCAAGCATGTTAG"};
+    km::SkmerManipulator<kuint> manip {k, m};
+
+    for (int i {0}; i < k-m+1; i++)
+    {
+        kuint nucl {static_cast<kuint>((seq[i] >> 1) & 0b11)};
+        manip.add_nucleotide(nucl);
+    }
+    
+    kuint expected_minimizer[] {0b0011, 0b0001, 0b0000, 0b1001, 0b0111, 0b0001, 0b1000, 0b0001, 0b0100};
+
+    for (int i {k-m+1}; i < seq.length(); i++)
+    {
+        kuint nucl {static_cast<kuint>((seq[i] >> 1) & 0b11)};
+        manip.add_nucleotide(nucl);
+        
+        //cout << manip.minimizer() << endl;
+        ASSERT_EQ(manip.minimizer(),expected_minimizer[i-k+m-1]);
+    }
+
+}
