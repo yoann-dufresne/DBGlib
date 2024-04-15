@@ -395,11 +395,8 @@ public:
         );
     }
 
-    kuint minimizer(const Skmer<kuint> skmer) const {
-        return std::min(
-            static_cast<kuint>(skmer.m_fwd.m_pair >> (4*(k-m))),
-            static_cast<kuint>(skmer.m_rev.m_pair >> (4*(k-m)))
-        );
+    kuint minimizer(const Skmer<kuint>& skmer) const {
+        return static_cast<kuint>(skmer.m_pair >> (4*(k-m)));
     }
 
     template<typename T>

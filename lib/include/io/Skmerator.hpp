@@ -21,7 +21,7 @@ class FileSkmerator
 protected:
     const std::string& m_filename;
     SkmerManipulator<kuint>& m_manip;
-    Skmer<kuint> yielded_skmer;
+    Skmer<kuint> m_yielded_skmer;
 
 public:
     FileSkmerator(const std::string& filename, SkmerManipulator<kuint>& manipulator)
@@ -81,7 +81,7 @@ public:
                     for (uint64_t idx = 0 ; idx<m_manip.k-1 ; idx++)
                     {
                         // Nucl encoding. TODO: Move encoding to dedicated classes
-                        const kuint nucl {(m_record.seq[idx] >> 1) & 0b11U};
+                        const kuint nucl {static_cast<kuint>((m_record.seq[idx] >> 1) & 0b11U)};
                         m_manip.add_nucleotide(nucl);
                     }
 
@@ -112,7 +112,7 @@ public:
         Skmer<kuint> operator*() const
         {
             cout << "operator*" << endl;
-            return m_rator.yielded_skmer;
+            return m_rator.m_yielded_skmer;
         }
 
         Iterator& operator++()
@@ -141,10 +141,11 @@ public:
                 cout << "seq position: " << (m_ptr_end+1) << " ; rem_nuc " << m_remaining_nucleotides << endl;
 
                 // out of context case (the suffix of the skmer is not large enought to hold the minimizer)
+                // TODO : Reread everything here !
                 if (m_ptr_end - m_ptr_min >= k - m)
                 {
                     // store the previous skmer
-                    m_rator.m_prev_min_skmer = m_skmer_buffer_array[ m_ptr_min % m_buffer_size ];
+                    m_prefixed_skmer = m_skmer_buffer_array[ m_ptr_min % m_buffer_size ];
 
                     //move the beginning to the new position
                     m_ptr_begin = m_ptr_min + 1;
@@ -171,14 +172,15 @@ public:
 
                 // Get the next kmer 
                 // If we reach the end of the sequence we add fake nucleotides (0b11) to complete the last skmer  
-                const kuint nucl { m_remaining_nucleotides >= 0 ? ((m_record.seq[m_ptr_end] >> 1) & 0b11UL) : 0b11UL};
+                const kuint nucl {
+                    m_remaining_nucleotides >= 0 ?(static_cast<kuint>((m_record.seq[m_ptr_end] >> 1) & 0b11U)) : static_cast<kuint>(0b11U)};
                 
                 // add nucleotide to the current candidate superkmer
                 Skmer<kuint> candidate {m_manip.add_nucleotide(nucl)};
                 m_skmer_buffer_array[ m_ptr_end % m_buffer_size ] = candidate;
                 
 
-                const kuint candidate_minimizer {candidate.minimizer()};
+                const kuint candidate_minimizer {m_manip.minimizer(candidate)};
 
                 // If there is a new minimal superkmer
                 if (candidate_minimizer < m_current_minimizer){
