@@ -187,9 +187,9 @@ public:
                 // If there is a new minimal superkmer
                 if (candidate_minimizer < m_current_minimizer){
 
-                    // out of context 
-                    if ( m_ptr_end - m_ptr_begin > k - m)
-                    {
+                    // // out of context 
+                    // if ( m_ptr_end - m_ptr_begin > k - m)
+                    // {
                         // 1 - Yield the prefied registered skmer
                         m_prefixed_skmer.m_suff_size = m_ptr_end - m_ptr_min - 1;
                         m_rator.m_yielded_skmer = m_prefixed_skmer;
@@ -204,16 +204,20 @@ public:
                         // save the new current minimal skmer
                         m_ptr_min = m_ptr_end;
                         
+                        // save the new current minimal skmer
+                        m_current_minimizer = candidate_minimizer;
+                        
+                        // skip when skmers are smaller than k.
+                        if (m_rator.m_yielded_skmer.m_pref_size + m_rator.m_yielded_skmer.m_suff_size < k - m)
+                            continue;
+
                         // cout << "b: " << m_ptr_begin << " ; m: " << m_ptr_min << " ; e: " << m_ptr_end << endl;
-                        // cout << "Yielding OCC end-beg > k - m" << endl;
+                        cout << "Yielding OCC end-beg > k - m" << endl;
 
                         // 3 - return the yielded skmer
                         return *this;
-                    }
+                    // }
 
-                    // save the new current minimal skmer
-                    m_current_minimizer = candidate_minimizer;
-                    m_ptr_min = m_ptr_end;
                 }
 
                 // The candidate minimizer is the same than the previous minimizer
@@ -233,32 +237,37 @@ public:
                         if (m_manip.kmer_lt_kmer(current_skmer, curr_skmer_km_pos, prev_skmer, prev_skmer_km_pos))
                         {
                             // Current skmer get the kmer
-
+                            m_prefixed_skmer = m_skmer_buffer_array[m_ptr_min % m_buffer_size];
                             // - Update the suffix of the prev skmer
                             m_prefixed_skmer.m_suff_size = pos_diff + curr_skmer_km_pos;
                             // - Yield the prev skmer
-                            m_yielded_skmer = m_prefixed_skmer;
+                            m_rator.m_yielded_skmer = m_prefixed_skmer;
 
                             // - Update the prefixed skmer
-                            m_prefixed_skmer = m_skmer_buffer_array[m_ptr_end];
+                            m_prefixed_skmer = m_skmer_buffer_array[m_ptr_end % m_buffer_size];
                             // - Update the current skmer prefix
                             m_prefixed_skmer.m_pref_size = k - m - curr_skmer_km_pos;
 
                             // Quit the loop
                             m_ptr_min = m_ptr_end;
+
+                            // skip when skmers are smaller than k.
+                            if (m_rator.m_yielded_skmer.m_pref_size + m_rator.m_yielded_skmer.m_suff_size < k - m)
+                                break;
+
+                            cout << "Yielding when minimizers are equal." << endl;
                             return *this;
                         }
                     }
 
-                    cerr << "equal minimizer not implemented yet" << endl;
-                    exit(1);
                 }
             }
 
             // We reached the end of the sequence
             m_prefixed_skmer.m_suff_size = m_ptr_end - m_ptr_min - 1;
             m_rator.m_yielded_skmer = m_prefixed_skmer;
-
+            
+            cout << "Last one." << endl;
             return *this;
         }
 

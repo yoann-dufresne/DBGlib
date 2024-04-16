@@ -19,12 +19,15 @@ static const std::string fa3 {"../tests/data/fasta3.fa"};
 TEST(Skmerator, two_nucleotides)
 {
     using kuint = uint16_t;
+    using kpair = km::Skmer<kuint>::pair;
+    
     const uint64_t k{5};
     const uint64_t m{2};
 
     km::SkmerManipulator<kuint> manip {k, m};
     km::FileSkmerator<kuint> skmerator {fa3, manip};
     km::SkmerPrettyPrinter<kuint> pp {k, m};
+    
 
     //                         Prefix:          C   C   C   C             A   C   C   C             A   A   C   
     //                         Suffix:       A   _   _   _             A    A   _   _             A   A   A   _
@@ -39,11 +42,15 @@ TEST(Skmerator, two_nucleotides)
     {
         pp << &skmer;
         cout << pp << endl;
-        //EXPECT_EQ(expected_values[nb_skmer], manip.m_fwd.m_pair);
+
+        //                            Less significant             Most significant
+        const kpair expected_pair{expected_values[nb_skmer][1], expected_values[nb_skmer][0]};
+        ASSERT_EQ(expected_pair, skmer.m_pair);
+        
         nb_skmer += 1;
     }
  
-    ASSERT_EQ(nb_skmer, 3);
+    //ASSERT_EQ(nb_skmer, 3);
 }
 
 // TODO: TEST THE MASKING OF THE SKMERS

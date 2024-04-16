@@ -404,14 +404,24 @@ public:
      * @param first_kmer_pos Position of the fist kmer in the first skmer. 0 is the kmer that contains the whole prefix.
      * @return true if the first kmer is less than the second one
      **/
-    bool kmer_lt_kmer(const Skmer<kuint>& first_skmer, const uint64_t fist_kmer_pos, const Skmer<kuint>& second_skmer, const uint64_t second_kmer_pos) const
+    bool kmer_lt_kmer(const Skmer<kuint>& first_skmer, const uint64_t first_kmer_pos, const Skmer<kuint>& second_skmer, const uint64_t second_kmer_pos) const
     {
-        // 1 - Compute the missing nucleotide leftmost position
+        // 1 - Compute the missing nucleotide leftmost position for both kmers and mask size
+        const uint64_t first_mask_size {(k-m)/2 > first_kmer_pos ? first_kmer_pos * 2 - 1 : 2 * (k - m - first_kmer_pos) };
+        const uint64_t second_mask_size {(k-m)/2 > second_kmer_pos ? second_kmer_pos * 2 - 1 : 2 * (k - m - second_kmer_pos) };
+        const uint64_t mask_size {std::max(first_mask_size, second_mask_size) * 2};
         
+        // 2 - Compare masked kmers
+        // check if first skmer shifted right of mask is < second skmer shifted right of mask  
+        const auto first_kmer {first_skmer.m_pair >> mask_size};
+        const auto second_kmer {second_skmer.m_pair >> mask_size};  
 
-        // 2 - Create the comparison mask
-        // 3 - Compare masked kmers
+        if (first_kmer != second_kmer) 
+            return first_kmer < second_kmer;        
+        
         // 4 - If equals => true if second skmer is the first one to miss a nucleotide (left based)
+        return first_mask_size < second_mask_size;
+    
     }
 
     template<typename T>
