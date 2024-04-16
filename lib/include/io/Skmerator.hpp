@@ -182,17 +182,18 @@ public:
                 
 
                 const kuint candidate_minimizer {m_manip.minimizer(candidate)};
-                cout << "candidate_minimizer: " << candidate_minimizer << " m_current_minimizer: " << m_current_minimizer << endl;
+                // cout << "candidate_minimizer: " << candidate_minimizer << " m_current_minimizer: " << m_current_minimizer << endl;
 
                 // If there is a new minimal superkmer
                 if (candidate_minimizer < m_current_minimizer){
-
+                    cout << "- New minimizer -" << endl;
                     // // out of context 
                     // if ( m_ptr_end - m_ptr_begin > k - m)
                     // {
                         // 1 - Yield the prefied registered skmer
                         m_prefixed_skmer.m_suff_size = m_ptr_end - m_ptr_min - 1;
                         m_rator.m_yielded_skmer = m_prefixed_skmer;
+                        m_manip.mask_absent_nucleotides(m_rator.m_yielded_skmer);
 
                         // 2 - Prefix the new skmer
                         candidate.m_pref_size = k - m;
@@ -206,6 +207,8 @@ public:
                         
                         // save the new current minimal skmer
                         m_current_minimizer = candidate_minimizer;
+
+                        cout << m_rator.m_yielded_skmer << endl;
                         
                         // skip when skmers are smaller than k.
                         if (m_rator.m_yielded_skmer.m_pref_size + m_rator.m_yielded_skmer.m_suff_size < k - m)
@@ -223,6 +226,7 @@ public:
                 // The candidate minimizer is the same than the previous minimizer
                 else if (candidate_minimizer == m_current_minimizer)
                 {
+                    cout << "- Same minimizer -" << endl;
                     const uint64_t pos_diff {m_ptr_end - m_ptr_min};
                     const Skmer<kuint>& current_skmer {m_skmer_buffer_array[m_ptr_end]};
                     const Skmer<kuint>& prev_skmer {m_skmer_buffer_array[m_ptr_min]};
@@ -239,9 +243,10 @@ public:
                             // Current skmer get the kmer
                             m_prefixed_skmer = m_skmer_buffer_array[m_ptr_min % m_buffer_size];
                             // - Update the suffix of the prev skmer
-                            m_prefixed_skmer.m_suff_size = pos_diff + curr_skmer_km_pos;
+                            m_prefixed_skmer.m_suff_size = pos_diff + curr_skmer_km_pos - 1;
                             // - Yield the prev skmer
                             m_rator.m_yielded_skmer = m_prefixed_skmer;
+                            m_manip.mask_absent_nucleotides(m_rator.m_yielded_skmer);
 
                             // - Update the prefixed skmer
                             m_prefixed_skmer = m_skmer_buffer_array[m_ptr_end % m_buffer_size];
@@ -250,6 +255,8 @@ public:
 
                             // Quit the loop
                             m_ptr_min = m_ptr_end;
+
+                            cout << m_rator.m_yielded_skmer << endl;
 
                             // skip when skmers are smaller than k.
                             if (m_rator.m_yielded_skmer.m_pref_size + m_rator.m_yielded_skmer.m_suff_size < k - m)

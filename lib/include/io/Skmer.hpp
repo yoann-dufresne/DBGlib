@@ -41,13 +41,13 @@ public:
     {}
 
     Skmer<kuint>& operator= (const Skmer<kuint>& other)
-    { m_pair = other.m_pair; return *this; }
+    { m_pair = other.m_pair; m_pref_size = other.m_pref_size; m_suff_size = other.m_suff_size; return *this; }
 
     Skmer<kuint>& operator= (const pair& value)
     { m_pair = value; return *this; }
 
     Skmer<kuint>& operator= (Skmer<kuint>&& other)
-    { m_pair = other.m_pair; return *this; }
+    { m_pair = other.m_pair; m_pref_size = other.m_pref_size; m_suff_size = other.m_suff_size; return *this; }
 
     bool operator<(const Skmer<kuint>& other) const
     { 
@@ -75,6 +75,8 @@ public:
         pair() : m_value(0, 0)
         {}
         pair(kuint& single) : m_value(0, single)
+        {}
+        pair(kuint single) : m_value(0, single)
         {}
         pair(const kuint* values) :  m_value(values[1], values[0])
         {}
@@ -388,15 +390,36 @@ public:
             return m_fwd;
     }
 
-    kuint minimizer() const {
+    kuint minimizer() const
+    {
         return std::min(
             static_cast<kuint>(m_fwd.m_pair >> (4*(k-m))),
             static_cast<kuint>(m_rev.m_pair >> (4*(k-m)))
         );
     }
 
-    kuint minimizer(const Skmer<kuint>& skmer) const {
+    kuint minimizer(const Skmer<kuint>& skmer) const
+    {
         return static_cast<kuint>(skmer.m_pair >> (4*(k-m)));
+    }
+
+    /** Replace the bits of absent nucleotides (outside of registered prefix/suffix) by 0b11.
+     * @param skmer Super kmer to modify
+     **/
+    void mask_absent_nucleotides(Skmer<kuint> skmer) const
+    {
+        using kpair = km::Skmer<kuint>::pair;
+        cout << "mask" << endl;
+        cout << skmer << endl;
+        // Mask prefix
+        for (uint64_t i{0} ; i<(k-m-skmer.m_pref_size) ; i++)
+            skmer.m_pair |= kpair(0b11U) << (4 * i);
+
+        // Mask suffix
+        for (uint64_t i{0} ; i<(k-m-skmer.m_suff_size) ; i++)
+            skmer.m_pair |= kpair(0b11U) << (4 * i + 2);
+        cout << skmer << endl;
+        cout << "/mask" << endl;
     }
 
     /** Compare 2 kmers included in 2 skmers.
