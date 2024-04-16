@@ -399,6 +399,21 @@ public:
         return static_cast<kuint>(skmer.m_pair >> (4*(k-m)));
     }
 
+    /** Compare 2 kmers included in 2 skmers.
+     * @param first_skmer First kmer is included in this skmer
+     * @param first_kmer_pos Position of the fist kmer in the first skmer. 0 is the kmer that contains the whole prefix.
+     * @return true if the first kmer is less than the second one
+     **/
+    bool kmer_lt_kmer(const Skmer<kuint>& first_skmer, const uint64_t fist_kmer_pos, const Skmer<kuint>& second_skmer, const uint64_t second_kmer_pos) const
+    {
+        // 1 - Compute the missing nucleotide leftmost position
+        
+
+        // 2 - Create the comparison mask
+        // 3 - Compare masked kmers
+        // 4 - If equals => true if second skmer is the first one to miss a nucleotide (left based)
+    }
+
     template<typename T>
     friend std::ostream& operator<<(std::ostream& os, SkmerManipulator<T>& manip);
 };

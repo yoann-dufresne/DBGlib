@@ -216,9 +216,40 @@ public:
                     m_ptr_min = m_ptr_end;
                 }
 
-                // The candidate is the same than the previous minimizer
+                // The candidate minimizer is the same than the previous minimizer
                 else if (candidate_minimizer == m_current_minimizer)
                 {
+                    const uint64_t pos_diff {m_ptr_end - m_ptr_min};
+                    const Skmer<kuint>& current_skmer {m_skmer_buffer_array[m_ptr_end]};
+                    const Skmer<kuint>& prev_skmer {m_skmer_buffer_array[m_ptr_min]};
+
+                    // 1 - Scan all the shared kmers in the 2 skmers to decide where they belong
+                    // (0th position is skipped because always in favor of the previous skmer)
+                    for (uint64_t curr_skmer_km_pos {1} ; curr_skmer_km_pos < pos_diff ; curr_skmer_km_pos++)
+                    {
+                        const uint64_t prev_skmer_km_pos {curr_skmer_km_pos + pos_diff};
+
+                        // 2 - Is the shared kmer still part of the previous skmer ?
+                        if (m_manip.kmer_lt_kmer(current_skmer, curr_skmer_km_pos, prev_skmer, prev_skmer_km_pos))
+                        {
+                            // Current skmer get the kmer
+
+                            // - Update the suffix of the prev skmer
+                            m_prefixed_skmer.m_suff_size = pos_diff + curr_skmer_km_pos;
+                            // - Yield the prev skmer
+                            m_yielded_skmer = m_prefixed_skmer;
+
+                            // - Update the prefixed skmer
+                            m_prefixed_skmer = m_skmer_buffer_array[m_ptr_end];
+                            // - Update the current skmer prefix
+                            m_prefixed_skmer.m_pref_size = k - m - curr_skmer_km_pos;
+
+                            // Quit the loop
+                            m_ptr_min = m_ptr_end;
+                            return *this;
+                        }
+                    }
+
                     cerr << "equal minimizer not implemented yet" << endl;
                     exit(1);
                 }
