@@ -232,43 +232,44 @@ public:
                     const Skmer<kuint>& prev_skmer {m_skmer_buffer_array[m_ptr_min % m_buffer_size]};
 
                     cout << "current  " << current_skmer << endl;
-                    cout << "prev     " << prev_skmer << endl;
                     cout << "prefixed " << m_prefixed_skmer << endl;
 
-                    // 1 - Scan all the shared kmers in the 2 skmers to decide where they belong
-                    // (0th position is skipped because always in favor of the previous skmer)
-                    for (uint64_t curr_skmer_km_pos {1} ; curr_skmer_km_pos < pos_diff ; curr_skmer_km_pos++)
+                    // 0 - Due to the way that we encode skmers, the no suffix kmer in the current skmer will always be with the previous skmer.
+                    uint64_t first_kmer_in_new_skmer {1};
+
+                    // 1 - Scan all the kmer shared between the 2 skmers to decide where is the limit between the 2 skmers
+                    for (uint64_t curr_skmer_km_pos {1} ; curr_skmer_km_pos < k - m - pos_diff ; curr_skmer_km_pos++)
                     {
                         const uint64_t prev_skmer_km_pos {curr_skmer_km_pos + pos_diff};
 
-                        // 2 - Is the shared kmer still part of the previous skmer ?
+                        // 2 - The shared kmer is part of the new skmer
                         if (m_manip.kmer_lt_kmer(current_skmer, curr_skmer_km_pos, prev_skmer, prev_skmer_km_pos))
                         {
-                            // Current skmer get the kmer
-                            m_prefixed_skmer = m_skmer_buffer_array[m_ptr_min % m_buffer_size];
-                            // - Update the suffix of the prev skmer
-                            m_prefixed_skmer.m_suff_size = pos_diff + curr_skmer_km_pos - 1;
-                            // - Yield the prev skmer
-                            m_rator.m_yielded_skmer = m_prefixed_skmer;
-                            m_manip.mask_absent_nucleotides(m_rator.m_yielded_skmer);
-
-                            // - Update the prefixed skmer
-                            m_prefixed_skmer = m_skmer_buffer_array[m_ptr_end % m_buffer_size];
-                            // - Update the current skmer prefix
-                            m_prefixed_skmer.m_pref_size = k - m - curr_skmer_km_pos;
-
-                            // Quit the loop
-                            m_ptr_min = m_ptr_end;
-
-                            // skip when skmers are smaller than k.
-                            if (m_rator.m_yielded_skmer.m_pref_size + m_rator.m_yielded_skmer.m_suff_size < k - m)
-                                break;
-
-                            cout << "Yielding when minimizers are equal." << endl;
-                            return *this;
+                            first_kmer_in_new_skmer = curr_skmer_km_pos;
+                            break;
                         }
                     }
 
+                    // 3 - Construct the skmer to yield
+                    m_prefixed_skmer.m_suff_size = pos_diff + first_kmer_in_new_skmer;
+                    m_manip.mask_absent_nucleotides(m_prefixed_skmer);
+                    m_rator.m_yielded_skmer = m_prefixed_skmer;
+                    cout << "yielded " << m_rator.m_yielded_skmer << endl;
+
+                    // 4 - Construct the new prefixed kmer
+                    m_prefixed_skmer = m_skmer_buffer_array[m_ptr_end % m_buffer_size];
+                    m_prefixed_skmer.m_pref_size = k - m - first_kmer_in_new_skmer;
+
+                    m_ptr_min = m_ptr_end;
+
+                    // 5 - Yield if the skmer is large enought
+                    if (m_rator.m_yielded_skmer.m_pref_size + m_rator.m_yielded_skmer.m_suff_size >= k - m)
+                    {
+                        cout << "Yielding when minimizers are equal." << endl;
+                        return *this;
+                    }
+
+                    cout << "-- end same ---" << endl;
                     cout << endl;
                 }
             }

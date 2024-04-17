@@ -425,6 +425,7 @@ public:
      **/
     bool kmer_lt_kmer(const Skmer<kuint>& first_skmer, const uint64_t first_kmer_pos, const Skmer<kuint>& second_skmer, const uint64_t second_kmer_pos) const
     {
+        cout << "k_lt_k " << first_kmer_pos << " " << second_kmer_pos << endl;
         // 1 - Compute the missing nucleotide leftmost position for both kmers and mask size
         const uint64_t first_mask_size {(k-m)/2 > first_kmer_pos ? first_kmer_pos * 2 - 1 : 2 * (k - m - first_kmer_pos) };
         const uint64_t second_mask_size {(k-m)/2 > second_kmer_pos ? second_kmer_pos * 2 - 1 : 2 * (k - m - second_kmer_pos) };
