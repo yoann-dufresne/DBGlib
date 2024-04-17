@@ -208,14 +208,14 @@ public:
                         // save the new current minimal skmer
                         m_current_minimizer = candidate_minimizer;
 
-                        cout << m_rator.m_yielded_skmer << endl;
+                        // cout << m_rator.m_yielded_skmer << endl;
                         
                         // skip when skmers are smaller than k.
                         if (m_rator.m_yielded_skmer.m_pref_size + m_rator.m_yielded_skmer.m_suff_size < k - m)
                             continue;
 
                         // cout << "b: " << m_ptr_begin << " ; m: " << m_ptr_min << " ; e: " << m_ptr_end << endl;
-                        cout << "Yielding OCC end-beg > k - m" << endl;
+                        // cout << "Yielding OCC end-beg > k - m" << endl;
 
                         // 3 - return the yielded skmer
                         return *this;
@@ -255,8 +255,6 @@ public:
 
                             // Quit the loop
                             m_ptr_min = m_ptr_end;
-
-                            cout << m_rator.m_yielded_skmer << endl;
 
                             // skip when skmers are smaller than k.
                             if (m_rator.m_yielded_skmer.m_pref_size + m_rator.m_yielded_skmer.m_suff_size < k - m)

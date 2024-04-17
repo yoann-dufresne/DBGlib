@@ -74,9 +74,9 @@ public:
 
         pair() : m_value(0, 0)
         {}
-        pair(kuint& single) : m_value(0, single)
+        pair(kuint& single) : m_value(single, 0)
         {}
-        pair(kuint single) : m_value(0, single)
+        pair(kuint single) : m_value(single, 0)
         {}
         pair(const kuint* values) :  m_value(values[1], values[0])
         {}
@@ -406,11 +406,9 @@ public:
     /** Replace the bits of absent nucleotides (outside of registered prefix/suffix) by 0b11.
      * @param skmer Super kmer to modify
      **/
-    void mask_absent_nucleotides(Skmer<kuint> skmer) const
+    void mask_absent_nucleotides(Skmer<kuint>& skmer) const
     {
         using kpair = km::Skmer<kuint>::pair;
-        cout << "mask" << endl;
-        cout << skmer << endl;
         // Mask prefix
         for (uint64_t i{0} ; i<(k-m-skmer.m_pref_size) ; i++)
             skmer.m_pair |= kpair(0b11U) << (4 * i);
@@ -418,8 +416,6 @@ public:
         // Mask suffix
         for (uint64_t i{0} ; i<(k-m-skmer.m_suff_size) ; i++)
             skmer.m_pair |= kpair(0b11U) << (4 * i + 2);
-        cout << skmer << endl;
-        cout << "/mask" << endl;
     }
 
     /** Compare 2 kmers included in 2 skmers.
