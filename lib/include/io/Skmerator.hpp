@@ -182,7 +182,7 @@ public:
                 
 
                 const kuint candidate_minimizer {m_manip.minimizer(candidate)};
-                // cout << "candidate_minimizer: " << candidate_minimizer << " m_current_minimizer: " << m_current_minimizer << endl;
+                cout << "candidate_minimizer: " << candidate_minimizer << " m_current_minimizer: " << m_current_minimizer << endl;
 
                 // If there is a new minimal superkmer
                 if (candidate_minimizer < m_current_minimizer){
@@ -228,8 +228,12 @@ public:
                 {
                     cout << "- Same minimizer -" << endl;
                     const uint64_t pos_diff {m_ptr_end - m_ptr_min};
-                    const Skmer<kuint>& current_skmer {m_skmer_buffer_array[m_ptr_end]};
-                    const Skmer<kuint>& prev_skmer {m_skmer_buffer_array[m_ptr_min]};
+                    const Skmer<kuint>& current_skmer {m_skmer_buffer_array[m_ptr_end % m_buffer_size]};
+                    const Skmer<kuint>& prev_skmer {m_skmer_buffer_array[m_ptr_min % m_buffer_size]};
+
+                    cout << "current  " << current_skmer << endl;
+                    cout << "prev     " << prev_skmer << endl;
+                    cout << "prefixed " << m_prefixed_skmer << endl;
 
                     // 1 - Scan all the shared kmers in the 2 skmers to decide where they belong
                     // (0th position is skipped because always in favor of the previous skmer)
@@ -265,6 +269,7 @@ public:
                         }
                     }
 
+                    cout << endl;
                 }
             }
 
