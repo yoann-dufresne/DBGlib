@@ -45,6 +45,7 @@ public:
             , m_skmer_buffer_array(new Skmer<kuint>[m_buffer_size])
             , m_ptr_current(skmerator.m_manip.k - skmerator.m_manip.m)
             , m_ptr_min(0) // minimizer_position
+            , m_ptr_last_round(0)
         {
             if (m_ptr == nullptr)
                 return;
@@ -67,7 +68,7 @@ public:
 
         void init_record()
         {
-            cout << "init_record" << endl;
+            // cout << "init_record" << endl;
             do
             {
                 if ((*m_ptr) >> m_record)
@@ -100,7 +101,7 @@ public:
             }
             while (m_record.seq.length() < m_manip.k);
             // cout << m_curr_min_skmer << endl;
-            cout << "/init_record" << endl;
+            // cout << "/init_record" << endl;
 
         }
 
@@ -110,13 +111,13 @@ public:
         // Return kmer by value
         Skmer<kuint> operator*() const
         {
-            cout << "operator*" << endl;
+            // cout << "operator*" << endl;
             return m_rator.m_yielded_skmer;
         }
 
         Iterator& operator++()
         {
-            cout << "operator++" << endl;
+            // cout << "operator++" << endl;
             // File already consumed
             if (m_ptr == nullptr)
                 return *this;
@@ -127,6 +128,22 @@ public:
             // Go to next sequence
             if (m_remaining_nucleotides + k - m == 0)
             {
+                // Yield the stored but not returned skmers while sequence is already over
+                while ((m_ptr_last_round % m_buffer_size) != (m_ptr_current % m_buffer_size))
+                {
+                    // Get yielding candidate
+                    Skmer<kuint>& skmer {m_skmer_buffer_array[m_ptr_last_round % m_buffer_size]};
+                    m_ptr_last_round += 1;
+
+                    // Yield if needed
+                    if (skmer.m_pref_size + skmer.m_suff_size >= k - m)
+                    {
+                        m_rator.m_yielded_skmer = skmer;
+                        m_manip.mask_absent_nucleotides(m_rator.m_yielded_skmer);
+                        return *this;
+                    }
+                }
+
                 this->init_record();
                 // reached the end of the file while looking for the next sequence
                 if (m_ptr == nullptr)
@@ -140,6 +157,7 @@ public:
                 m_rator.m_yielded_skmer = m_skmer_buffer_array[(m_ptr_current + 1) % m_buffer_size];
 
                 // -- On out of context minimizer: recompute the previous minimizer
+                // TODO
 
                 // -- Compute the new candidate skmer
                 m_remaining_nucleotides -= 1;
@@ -149,7 +167,6 @@ public:
                 // If we reach the end of the sequence we add fake nucleotides (0b11) to complete the last skmer  
                 const kuint nucl {
                     m_remaining_nucleotides >= 0 ?(static_cast<kuint>((m_record.seq[m_ptr_current] >> 1) & 0b11U)) : static_cast<kuint>(0b11U)};
-                cout << "m: " << m_ptr_min << " ; c: " << m_ptr_current << endl;
                 
                 // add nucleotide to the current candidate superkmer
                 m_skmer_buffer_array[ m_ptr_current % m_buffer_size ] = m_manip.add_nucleotide(nucl);
@@ -160,10 +177,8 @@ public:
 
                 // -- A new minimizer has been discovered
                 if (candidate_minimizer < m_current_minimizer) {
-                    cout << "- mini <" << endl;
                     // 1 - Prefix the new skmer
                     candidate.m_pref_size = k - m;
-                    cout << "curr " << m_ptr_current << "\t" << candidate << endl;
 
                     // 2 - define the suffix of the previous skmer that was including the minimizer
                     Skmer<kuint>& mini_skmer {m_skmer_buffer_array[m_ptr_min % m_buffer_size]};
@@ -181,8 +196,6 @@ public:
                         const int64_t remaining_prev {m_remaining_nucleotides + static_cast<int64_t>(k - m - idx)};
                         if (remaining_prev < 0)
                             predecessor.m_suff_size = std::min(predecessor.m_suff_size, static_cast<uint16_t>(k - m +remaining_prev));
-
-                        cout << "update " << (m_ptr_current - (k - m) + idx) << " " << predecessor << endl;
                     }
                     
                     // 4 - save the new current minimal skmer and minimizer
@@ -193,7 +206,6 @@ public:
                 // The candidate minimizer is the same than the previous minimizer
                 else if (candidate_minimizer == m_current_minimizer)
                 {
-                    cout << "- mini == " << endl;
                     const uint64_t pos_diff {m_ptr_current - m_ptr_min};
                     Skmer<kuint>& current_skmer {m_skmer_buffer_array[m_ptr_current % m_buffer_size]};
                     Skmer<kuint>& prev_skmer {m_skmer_buffer_array[m_ptr_min % m_buffer_size]};
@@ -210,18 +222,12 @@ public:
                         if (m_manip.kmer_lt_kmer(current_skmer, first_kmer_in_new_skmer, prev_skmer, prev_skmer_km_pos))
                             break;
                     }
-                    cout << endl;
 
                     const uint64_t nb_kmers_in_prev {first_kmer_in_new_skmer};
-                    const uint64_t nb_kmers_in_curr {pos_diff - nb_kmers_in_prev + 1};
-                    cout << "kmers in skmers: " << nb_kmers_in_prev << " - " << nb_kmers_in_curr << endl;
 
                     // 3 - Update suffix of the previous skmer and prefix of the new skmer
                     prev_skmer.m_suff_size = nb_kmers_in_prev;
                     current_skmer.m_pref_size = k - m - nb_kmers_in_prev;
-                    
-                    cout << m_ptr_min << "\t" << prev_skmer << endl;
-                    cout << m_ptr_current << "\t" << current_skmer << endl;
 
                     // If end of the sequence
                     const int64_t remaining_prev {m_remaining_nucleotides + static_cast<int64_t>(pos_diff)};
@@ -239,8 +245,6 @@ public:
                     candidate.m_pref_size = std::min(candidate.m_pref_size, max_prefix);
                 }
 
-                cout << endl;
-
                 // -- Yield if needed
                 if (m_rator.m_yielded_skmer.m_pref_size + m_rator.m_yielded_skmer.m_suff_size >= k - m)
                 {
@@ -250,20 +254,18 @@ public:
 
             } // End of the while over the sequence
 
-            cout << endl;
-            for (uint64_t idx{0} ; idx<m_buffer_size ; idx++)
-            {
-                cout << ((m_ptr_current + 1 + idx) % m_buffer_size) << "\t" << m_skmer_buffer_array[(m_ptr_current + 1 + idx) % m_buffer_size] << endl;
-            }
-            cout << endl;
-            exit(1);
+            // cout << endl;
+            // for (uint64_t idx{0} ; idx<m_buffer_size ; idx++)
+            // {
+            //     cout << ((m_ptr_current + 1 + idx) % m_buffer_size) << "\t" << m_skmer_buffer_array[(m_ptr_current + 1 + idx) % m_buffer_size] << endl;
+            // }
+            // cout << endl;
 
-            // We reached the end of the sequence
-            m_rator.m_yielded_skmer = m_skmer_buffer_array[m_ptr_min % m_buffer_size];
-            m_rator.m_yielded_skmer.m_suff_size = m_ptr_current - m_ptr_min - 1;
+            // TODO: End of the sequence, register the last suffix
             
-            cout << "Last one." << endl;
-            return *this;
+            // Recursive call to return the already computed skmer array
+            m_ptr_last_round = m_ptr_current + 1;
+            return this->operator++();
         }
 
 
@@ -290,6 +292,7 @@ public:
         Skmer<kuint>* m_skmer_buffer_array;
         uint64_t m_ptr_current;
         uint64_t m_ptr_min;
+        uint64_t m_ptr_last_round;
     };
     
 

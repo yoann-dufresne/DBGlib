@@ -29,9 +29,9 @@ TEST(Skmerator, two_nucleotides)
     km::SkmerPrettyPrinter<kuint> pp {k, m};
     
 
-    //                         Prefix:          C   C   C   C             A   C   C   C             A   A   C   
+    //                         Prefix:          C   C   C   C             A   C   C   C             A   A   C   _  
     //                         Suffix:       A   _   _   _             A    A   _   _             A   A   A   _
-    const kuint expected_values[][2] { {0, 0b0001110111011101U}, {0, 0b0000000111011101U}, {0, 0b00000000000111U}
+    const kuint expected_values[][2] { {0, 0b0001110111011101U}, {0, 0b0000000111011101U}, {0, 0b0000000000011111U}
     };
 
     // FOR FASTA_3 WE EXPECT
@@ -40,8 +40,8 @@ TEST(Skmerator, two_nucleotides)
     uint64_t nb_skmer {0};
     for ([[maybe_unused]]km::Skmer<kuint> skmer : skmerator)
     {
-        pp << &skmer;
-        cout << pp << endl;
+        // pp << &skmer;
+        // cout << pp << endl;
 
         //                            Less significant             Most significant
         const kpair expected_pair{expected_values[nb_skmer][1], expected_values[nb_skmer][0]};
