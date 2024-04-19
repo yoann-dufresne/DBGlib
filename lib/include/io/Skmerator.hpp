@@ -157,7 +157,6 @@ public:
                 
                 // Get the minimizer
                 const kuint candidate_minimizer {m_manip.minimizer(candidate)};
-                // cout << "candidate_minimizer: " << candidate_minimizer << " m_current_minimizer: " << m_current_minimizer << endl;
 
                 // -- A new minimizer has been discovered
                 if (candidate_minimizer < m_current_minimizer) {
@@ -210,6 +209,14 @@ public:
                     current_skmer.m_pref_size = k - m - first_kmer_in_new_skmer;
 
                     m_ptr_min = m_ptr_current;
+                }
+
+                // Correction for the beginning of the sequence
+                if (m_ptr_current < 2 * k - m - 1)
+                {
+                    uint64_t dist_to_full_skmer = (2 * k - m - 1) - m_ptr_current;
+                    cout << "dist " << dist_to_full_skmer << endl;
+                    candidate.m_pref_size = dist_to_full_skmer > candidate.m_pref_size ? 0 : candidate.m_pref_size - dist_to_full_skmer;
                 }
 
                 // -- Yield if needed
