@@ -160,8 +160,10 @@ public:
 
                 // -- A new minimizer has been discovered
                 if (candidate_minimizer < m_current_minimizer) {
+                    cout << "- mini <" << endl;
                     // 1 - Prefix the new skmer
                     candidate.m_pref_size = k - m;
+                    cout << "curr " << m_ptr_current << "\t" << candidate << endl;
 
                     // 2 - define the suffix of the previous skmer that was including the minimizer
                     Skmer<kuint>& mini_skmer {m_skmer_buffer_array[m_ptr_min % m_buffer_size]};
@@ -174,6 +176,13 @@ public:
                         // Mask the nucleotides from the predecessor that are part of this skmer.
                         predecessor.m_suff_size = std::min( static_cast<uint16_t>(predecessor.m_suff_size)
                                                           , static_cast<uint16_t>(k - m - idx - 1));
+
+                        // If end of the sequence
+                        const int64_t remaining_prev {m_remaining_nucleotides + static_cast<int64_t>(k - m - idx)};
+                        if (remaining_prev < 0)
+                            predecessor.m_suff_size = std::min(predecessor.m_suff_size, static_cast<uint16_t>(k - m +remaining_prev));
+
+                        cout << "update " << (m_ptr_current - (k - m) + idx) << " " << predecessor << endl;
                     }
                     
                     // 4 - save the new current minimal skmer and minimizer
@@ -184,6 +193,7 @@ public:
                 // The candidate minimizer is the same than the previous minimizer
                 else if (candidate_minimizer == m_current_minimizer)
                 {
+                    cout << "- mini == " << endl;
                     const uint64_t pos_diff {m_ptr_current - m_ptr_min};
                     Skmer<kuint>& current_skmer {m_skmer_buffer_array[m_ptr_current % m_buffer_size]};
                     Skmer<kuint>& prev_skmer {m_skmer_buffer_array[m_ptr_min % m_buffer_size]};
@@ -192,35 +202,46 @@ public:
                     uint64_t first_kmer_in_new_skmer {1};
 
                     // 1 - Scan all the kmer shared between the 2 skmers to decide where is the limit between the 2 skmers
-                    for (uint64_t curr_skmer_km_pos {1} ; curr_skmer_km_pos < k - m - pos_diff ; curr_skmer_km_pos++)
+                    for ( ; first_kmer_in_new_skmer < k - m - pos_diff ; first_kmer_in_new_skmer++)
                     {
-                        const uint64_t prev_skmer_km_pos {curr_skmer_km_pos + pos_diff};
+                        const uint64_t prev_skmer_km_pos {first_kmer_in_new_skmer + pos_diff};
 
                         // 2 - The shared kmer is part of the new skmer
-                        if (m_manip.kmer_lt_kmer(current_skmer, curr_skmer_km_pos, prev_skmer, prev_skmer_km_pos))
-                        {
-                            first_kmer_in_new_skmer = curr_skmer_km_pos;
+                        if (m_manip.kmer_lt_kmer(current_skmer, first_kmer_in_new_skmer, prev_skmer, prev_skmer_km_pos))
                             break;
-                        }
                     }
+                    cout << endl;
+
+                    const uint64_t nb_kmers_in_prev {first_kmer_in_new_skmer};
+                    const uint64_t nb_kmers_in_curr {pos_diff - nb_kmers_in_prev + 1};
+                    cout << "kmers in skmers: " << nb_kmers_in_prev << " - " << nb_kmers_in_curr << endl;
 
                     // 3 - Update suffix of the previous skmer and prefix of the new skmer
-                    prev_skmer.m_suff_size = pos_diff + first_kmer_in_new_skmer;
-                    current_skmer.m_pref_size = k - m - first_kmer_in_new_skmer;
+                    prev_skmer.m_suff_size = nb_kmers_in_prev;
+                    current_skmer.m_pref_size = k - m - nb_kmers_in_prev;
+                    
+                    cout << m_ptr_min << "\t" << prev_skmer << endl;
+                    cout << m_ptr_current << "\t" << current_skmer << endl;
+
+                    // If end of the sequence
+                    const int64_t remaining_prev {m_remaining_nucleotides + static_cast<int64_t>(pos_diff)};
+                    if (remaining_prev < 0)
+                        prev_skmer.m_suff_size = std::min(prev_skmer.m_suff_size, static_cast<uint16_t>(k - m +remaining_prev));
+
 
                     m_ptr_min = m_ptr_current;
                 }
 
-                // Correction for the beginning of the sequence
+                // Correction of the prefix size for the beginning of the sequence
                 if (m_ptr_current < 2 * k - m - 1)
                 {
-                    uint64_t dist_to_full_skmer = (2 * k - m - 1) - m_ptr_current;
-                    cout << "dist " << dist_to_full_skmer << endl;
-                    candidate.m_pref_size = dist_to_full_skmer > candidate.m_pref_size ? 0 : candidate.m_pref_size - dist_to_full_skmer;
+                    uint16_t max_prefix {static_cast<uint16_t>(m_ptr_current - (k - 1))};
+                    candidate.m_pref_size = std::min(candidate.m_pref_size, max_prefix);
                 }
 
+                cout << endl;
+
                 // -- Yield if needed
-                cout << "registered skmer " << m_rator.m_yielded_skmer << endl;
                 if (m_rator.m_yielded_skmer.m_pref_size + m_rator.m_yielded_skmer.m_suff_size >= k - m)
                 {
                     m_manip.mask_absent_nucleotides(m_rator.m_yielded_skmer);
