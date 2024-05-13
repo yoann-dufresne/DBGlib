@@ -16,30 +16,67 @@ namespace km
 
 
 template <typename kuint>
-class FileSkmerator
+class FileSkmerator;
+
+
+// ----------------------- NEW SEQ ITERATOR ---------------------------
+
+template <typename kuint>
+class SeqSkmerator
 {
 protected:
-    const std::string& m_filename;
-    SkmerManipulator<kuint>& m_manip;
+    const std::string& m_seq;
     Skmer<kuint> m_yielded_skmer;
 
 public:
-    FileSkmerator(const std::string& filename, SkmerManipulator<kuint>& manipulator)
-        : m_filename(filename), m_manip(manipulator)
+
+    SeqSkmerator(const std::string& sequence) : m_seq(sequence)
     {};
+
+    SeqSkmerator& operator=(const SeqSkmerator& other)
+    {
+        m_seq = other.m_seq;
+        m_yielded_skmer = other.m_yielded_skmer;
+
+        return *this;
+    }
 
     struct Iterator
     {
+
+    private:
+        // Sequence file related attributes
+        SeqSkmerator<kuint>& m_rator;
+        const std::string& m_seq;
+        int64_t m_remaining_nucleotides;
+        bool m_consumed;
+
+        // Manipulator to compute interleaved along the sequence
+        SkmerManipulator<kuint>& m_manip;
+        kuint m_current_minimizer;
+
+        // Buffered unmasked skmers
+        const uint64_t m_buffer_size;
+        Skmer<kuint>* m_skmer_buffer_array;
+        uint64_t m_ptr_current;
+        uint64_t m_ptr_min;
+        uint64_t m_ptr_last_round;
+
     public:
         ~Iterator()
         {
             delete[] m_skmer_buffer_array;
         }
 
+        bool consumed() const
+        {
+            return m_consumed;
+        }
+
     protected:
         // Construct an iterator without control on the file stream
-        Iterator(FileSkmerator& skmerator, std::unique_ptr<klibpp::SeqStreamIn> stream_ptr)
-            : m_rator(skmerator), m_ptr(std::move(stream_ptr)), m_remaining_nucleotides(0)
+        Iterator(SeqSkmerator& skmerator, const std::string& sequence)
+            : m_rator(skmerator), m_seq(sequence), m_remaining_nucleotides(sequence.length()), m_consumed(false)
             , m_manip(skmerator.m_manip), m_current_minimizer(~static_cast<kuint>(0))
             , m_buffer_size(2 * skmerator.m_manip.k - skmerator.m_manip.m)
             , m_skmer_buffer_array(new Skmer<kuint>[m_buffer_size])
@@ -47,65 +84,39 @@ public:
             , m_ptr_min(0) // minimizer_position
             , m_ptr_last_round(0)
         {
-            if (m_ptr == nullptr)
-                return;
-
-            this->init_record();
-            //cout << m_manip << endl;
-            this->operator++();
-
-            // const kuint nucl {(m_record.seq[m_seq_idx] >> 1) & 0b11U};
-            // m_curr_min_skmer = m_manip.add_nucleotide(nucl);
-
-            // m_remaining_nucleotides -= 1;
-            // m_seq_idx += 1;
-        }
-
-        // Construct a new file stream from the filename
-        Iterator(FileSkmerator& skmerator)
-            : Iterator ( skmerator, std::make_unique<klibpp::SeqStreamIn>(skmerator.m_filename.c_str()) )
-        {}
-
-        void init_record()
-        {
-            // cout << "init_record" << endl;
-            do
+            if (m_remaining_nucleotides < m_manip.k)
             {
-                if ((*m_ptr) >> m_record)
-                {
-                    // If sequence is too short, skip it
-                    if (m_record.seq.length() < m_rator.m_manip.k) {
-                        continue;
-                    }
-
-                    // Init the first kmer                    m_manip.init_skmer();
-                    for (uint64_t idx = 0 ; idx<m_manip.k-1 ; idx++)
-                    {
-                        // Nucl encoding. TODO: Move encoding to dedicated classes
-                        const kuint nucl {static_cast<kuint>((m_record.seq[idx] >> 1) & 0b11U)};
-                        m_manip.add_nucleotide(nucl);
-                    }
-
-                    m_current_minimizer = ~static_cast<kuint>(0);
-
-                    m_ptr_current = m_rator.m_manip.k - 2;
-                    m_ptr_min = m_rator.m_manip.k - 2;
-                    m_remaining_nucleotides = m_record.seq.length() - m_manip.k + 1;
-                }
-                else
-                {
-                    // No more sequence to read from the file
-                    m_ptr = nullptr;
-                    return;
-                }
+                m_consumed = true;
+                return;
             }
-            while (m_record.seq.length() < m_manip.k);
-            // cout << m_curr_min_skmer << endl;
-            // cout << "/init_record" << endl;
 
+            this->init_seq();
+            this->operator++();
         }
 
-        friend class FileSkmerator;
+        Iterator(SeqSkmerator& skmerator)
+            : m_rator(skmerator), m_remaining_nucleotides(0), m_consumed(true)
+        {};
+
+        void init_seq()
+        {
+            // Init the first kmer
+            for (uint64_t idx{0} ; idx<m_manip.k-1 ; idx++)
+            {
+                // Nucl encoding. TODO: Move encoding to dedicated classes
+                const kuint nucl {static_cast<kuint>((m_seq[idx] >> 1) & 0b11U)};
+                m_manip.add_nucleotide(nucl);
+            }
+
+            m_current_minimizer = ~static_cast<kuint>(0);
+
+            m_ptr_current = m_rator.m_manip.k - 2;
+            m_ptr_min = m_rator.m_manip.k - 2;
+            m_remaining_nucleotides -= m_manip.k - 1;
+        }
+
+        friend class SeqSkmerator;
+        friend class FileSkmerator<kuint>;
 
     public:
         // Return kmer by value
@@ -118,14 +129,12 @@ public:
         Iterator& operator++()
         {
             // cout << "operator++" << endl;
-            // File already consumed
-            if (m_ptr == nullptr)
-                return *this;
 
             const uint64_t k {m_rator.m_manip.k};
             const uint64_t m {m_rator.m_manip.m};
 
-            // Go to next sequence
+
+            // End of the sequence => final yieldings
             if (m_remaining_nucleotides + k - m == 0)
             {
                 // Yield the stored but not returned skmers while sequence is already over
@@ -144,12 +153,9 @@ public:
                     }
                 }
 
-                this->init_record();
-                // reached the end of the file while looking for the next sequence
-                if (m_ptr == nullptr)
-                    return *this;
+                m_consumed = true;
+                return *this;
             }
-
 
             while (m_remaining_nucleotides + k - m > 0)
             {
@@ -166,7 +172,7 @@ public:
                 // Get the next skmer 
                 // If we reach the end of the sequence we add fake nucleotides (0b11) to complete the last skmer  
                 const kuint nucl {
-                    m_remaining_nucleotides >= 0 ?(static_cast<kuint>((m_record.seq[m_ptr_current] >> 1) & 0b11U)) : static_cast<kuint>(0b11U)};
+                    m_remaining_nucleotides >= 0 ?(static_cast<kuint>((m_seq[m_ptr_current] >> 1) & 0b11U)) : static_cast<kuint>(0b11U)};
                 
                 // add nucleotide to the current candidate superkmer
                 m_skmer_buffer_array[ m_ptr_current % m_buffer_size ] = m_manip.add_nucleotide(nucl);
@@ -254,18 +260,125 @@ public:
 
             } // End of the while over the sequence
 
-            // cout << endl;
-            // for (uint64_t idx{0} ; idx<m_buffer_size ; idx++)
-            // {
-            //     cout << ((m_ptr_current + 1 + idx) % m_buffer_size) << "\t" << m_skmer_buffer_array[(m_ptr_current + 1 + idx) % m_buffer_size] << endl;
-            // }
-            // cout << endl;
-
             // TODO: End of the sequence, register the last suffix
             
             // Recursive call to return the already computed skmer array
+            // TODO: ?????????
             m_ptr_last_round = m_ptr_current + 1;
             return this->operator++();
+        }
+
+
+        // Warning: This function suppose that we are comparing iterator over the same sequence.
+        bool operator==(const Iterator& it) const
+        {
+            return m_rator.m_remaining_nucleotides == it.m_rator.m_remaining_nucleotides;
+        }
+
+    };
+    
+
+    Iterator begin() { return Iterator(*this, m_seq); }
+    Iterator end() { return Iterator(*this); }
+};
+
+
+// ----------------------- /NEW SEQ ITERATOR ---------------------------
+
+
+template <typename kuint>
+class FileSkmerator
+{
+protected:
+    const std::string& m_filename;
+    SkmerManipulator<kuint>& m_manip;
+
+public:
+    FileSkmerator(const std::string& filename, SkmerManipulator<kuint>& manipulator)
+        : m_filename(filename), m_manip(manipulator)
+    {};
+
+    struct Iterator
+    {
+
+    private:
+        // Sequence file related attributes
+        FileSkmerator<kuint>& m_rator;
+        std::unique_ptr<klibpp::SeqStreamIn> m_ptr;
+        klibpp::KSeq m_record;
+        // skmer sequence enumerator
+        SeqSkmerator<kuint> m_seq_rator;
+        SeqSkmerator<kuint>::Iterator m_skmer_iterator;
+
+    protected:
+        // Construct an iterator without control on the file stream
+        Iterator(FileSkmerator& skmerator, std::unique_ptr<klibpp::SeqStreamIn> stream_ptr)
+            : m_rator(skmerator), m_ptr(std::move(stream_ptr))
+        {
+            if (m_ptr == nullptr)
+                return;
+
+            this->init_record();
+            this->operator++();
+        }
+
+        // Construct a new file stream from the filename
+        Iterator(FileSkmerator& skmerator)
+            : Iterator ( skmerator, std::make_unique<klibpp::SeqStreamIn>(skmerator.m_filename.c_str()) )
+        {}
+
+        void init_record()
+        {
+            // cout << "init_record" << endl;
+            do
+            {
+                if ((*m_ptr) >> m_record)
+                {
+                    // If sequence is too short, skip it
+                    if (m_record.seq.length() < m_rator.m_manip.k) {
+                        continue;
+                    }
+
+                    m_seq_rator = SeqSkmerator(m_record.seq);
+                    m_skmer_iterator = m_seq_rator.begin();
+                }
+                else
+                {
+                    // No more sequence to read from the file
+                    m_ptr = nullptr;
+                    return;
+                }
+            }
+            while (m_skmer_iterator.consumed());
+        }
+
+        friend class FileSkmerator;
+
+    public:
+        // Return kmer by value
+        Skmer<kuint> operator*() const
+        {
+            return m_seq_rator.m_yielded_skmer;
+        }
+
+        Iterator& operator++()
+        {
+            // File already consumed
+            if (m_ptr == nullptr)
+                return *this;
+
+            // Go to next sequence
+            if (m_skmer_iterator.consumed())
+            {
+                this->init_record();
+                
+                // reached the end of the file while looking for the next sequence
+                if (m_ptr == nullptr)
+                    return *this;
+            }
+
+            m_skmer_iterator.operator++();
+            return *this;
         }
 
 
@@ -274,25 +387,6 @@ public:
             return m_rator.m_filename == it.m_rator.m_filename and m_ptr == it.m_ptr;
         }
 
-
-    private:
-        // Sequence file related attributes
-        FileSkmerator<kuint>& m_rator;
-        std::unique_ptr<klibpp::SeqStreamIn> m_ptr;
-        klibpp::KSeq m_record;
-        int64_t m_remaining_nucleotides;
-
-        // Manipulator to compute interleaved along the sequence
-        SkmerManipulator<kuint>& m_manip;
-        kuint m_current_minimizer;
-        // Skmer<kuint> m_curr_min_skmer;
-
-        // Buffered unmasked skmers
-        const uint64_t m_buffer_size;
-        Skmer<kuint>* m_skmer_buffer_array;
-        uint64_t m_ptr_current;
-        uint64_t m_ptr_min;
-        uint64_t m_ptr_last_round;
     };
     
 

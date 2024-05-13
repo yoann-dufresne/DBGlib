@@ -16,7 +16,7 @@ static const std::string fa1 {"../tests/data/fasta1.fa"};
 static const std::string fa2 {"../tests/data/fasta2.fa"};
 static const std::string fa3 {"../tests/data/fasta3.fa"};
 
-TEST(Skmerator, two_nucleotides)
+TEST(Skmerator, decreasing_minimizer)
 {
     using kuint = uint16_t;
     using kpair = km::Skmer<kuint>::pair;
@@ -52,5 +52,3 @@ TEST(Skmerator, two_nucleotides)
  
     //ASSERT_EQ(nb_skmer, 3);
 }
-
-// TODO: TEST THE MASKING OF THE SKMERS
