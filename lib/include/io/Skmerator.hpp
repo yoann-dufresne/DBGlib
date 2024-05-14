@@ -139,7 +139,7 @@ public:
 
         Iterator& operator++()
         {
-            // cout << "operator++" << endl;
+            cout << "operator++ " << m_remaining_nucleotides << endl;
 
             const uint64_t k {m_manip.k};
             const uint64_t m {m_manip.m};
@@ -148,12 +148,15 @@ public:
             // End of the sequence => final yieldings
             if (m_remaining_nucleotides + k - m == 0)
             {
+                cout << "IF " << endl;
                 // Yield the stored but not returned skmers while sequence is already over
-                while ((m_ptr_last_round % m_buffer_size) != (m_ptr_current % m_buffer_size))
+                do
                 {
+                    m_ptr_last_round += 1;
+                    cout << "last round " << (m_ptr_last_round % m_buffer_size) << " ";
                     // Get yielding candidate
                     Skmer<kuint>& skmer {m_skmer_buffer_array[m_ptr_last_round % m_buffer_size]};
-                    m_ptr_last_round += 1;
+                    cout << skmer.m_pref_size << " " << skmer.m_suff_size << endl;
 
                     // Yield if needed
                     if (skmer.m_pref_size + skmer.m_suff_size >= k - m)
@@ -163,6 +166,7 @@ public:
                         return *this;
                     }
                 }
+                while ((m_ptr_last_round % m_buffer_size) != (m_ptr_current % m_buffer_size));
 
                 m_consumed = true;
                 return *this;
@@ -173,8 +177,14 @@ public:
                 // -- Save the skmer to eventually yield
                 m_rator.m_yielded_skmer = m_skmer_buffer_array[(m_ptr_current + 1) % m_buffer_size];
 
-                // -- On out of context minimizer: recompute the previous minimizer
-                // TODO
+                // -- On out of context minimizer
+                if (m_ptr_current - m_ptr_min >= k - m)
+                {
+                    // Set the suffix size of the ooc skmer
+                    m_skmer_buffer_array[m_ptr_min % m_buffer_size].m_suff_size = k - m;
+                    // TODO: recompute the previous minimizer
+                }
+                
 
                 // -- Compute the new candidate skmer
                 m_remaining_nucleotides -= 1;
@@ -194,8 +204,10 @@ public:
 
                 // -- A new minimizer has been discovered
                 if (candidate_minimizer < m_current_minimizer) {
+                    cout << "new minimizer @" << (m_ptr_current % m_buffer_size) << endl;
                     // 1 - Prefix the new skmer
                     candidate.m_pref_size = k - m;
+                    cout << "pref " << candidate.m_pref_size << endl;
 
                     // 2 - define the suffix of the previous skmer that was including the minimizer
                     Skmer<kuint>& mini_skmer {m_skmer_buffer_array[m_ptr_min % m_buffer_size]};
@@ -223,6 +235,7 @@ public:
                 // The candidate minimizer is the same than the previous minimizer
                 else if (candidate_minimizer == m_current_minimizer)
                 {
+                    cout << "equal minimizer" << endl;
                     const uint64_t pos_diff {m_ptr_current - m_ptr_min};
                     Skmer<kuint>& current_skmer {m_skmer_buffer_array[m_ptr_current % m_buffer_size]};
                     Skmer<kuint>& prev_skmer {m_skmer_buffer_array[m_ptr_min % m_buffer_size]};
@@ -260,6 +273,7 @@ public:
                 {
                     uint16_t max_prefix {static_cast<uint16_t>(m_ptr_current - (k - 1))};
                     candidate.m_pref_size = std::min(candidate.m_pref_size, max_prefix);
+                    cout << "corrected pref " << candidate.m_pref_size << endl;
                 }
 
                 // -- Yield if needed
@@ -275,7 +289,7 @@ public:
             
             // Recursive call to return the already computed skmer array
             // TODO: ?????????
-            m_ptr_last_round = m_ptr_current + 1;
+            m_ptr_last_round = m_ptr_current;
             return this->operator++();
         }
 
@@ -283,8 +297,10 @@ public:
         // Warning: This function suppose that we are comparing iterator over the same sequence.
         bool operator==(const Iterator& it) const
         {
+            cout << "== " << m_consumed << endl;
             if (m_consumed and it.m_consumed)
                 return true;
+            cout << "number of remaining nucleotides" << endl;
 
             return m_remaining_nucleotides == it.m_remaining_nucleotides;
         }
