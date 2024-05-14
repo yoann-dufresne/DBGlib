@@ -9,12 +9,12 @@
 using namespace std;
 
 
-static const std::string data_path {std::getenv("DBGLIB_TEST_DATA") == nullptr ? "" : std::getenv("DBGLIB_TEST_DATA")};
+// static const std::string data_path {std::getenv("DBGLIB_TEST_DATA") == nullptr ? "" : std::getenv("DBGLIB_TEST_DATA")};
 
 // TODO: tmp usage of relative path befor solving the getenv issue.
-static const std::string fa1 {"../tests/data/fasta1.fa"};
-static const std::string fa2 {"../tests/data/fasta2.fa"};
-static const std::string fa3 {"../tests/data/fasta3.fa"};
+// static const std::string fa1 {"../tests/data/fasta1.fa"};
+// static const std::string fa2 {"../tests/data/fasta2.fa"};
+// static const std::string fa3 {"../tests/data/fasta3.fa"};
 
 TEST(Skmerator, decreasing_minimizer)
 {
@@ -25,7 +25,8 @@ TEST(Skmerator, decreasing_minimizer)
     const uint64_t m{2};
 
     km::SkmerManipulator<kuint> manip {k, m};
-    km::FileSkmerator<kuint> skmerator {fa3, manip};
+    std::string seq{"CCCCAAAAA"};
+    km::SeqSkmerator<kuint> skmerator {manip, seq};
     km::SkmerPrettyPrinter<kuint> pp {k, m};
     
 
