@@ -139,8 +139,6 @@ public:
 
         Iterator& operator++()
         {
-            cout << "operator++ " << m_remaining_nucleotides << endl;
-
             const uint64_t k {m_manip.k};
             const uint64_t m {m_manip.m};
 
@@ -148,15 +146,12 @@ public:
             // End of the sequence => final yieldings
             if (m_remaining_nucleotides + k - m == 0)
             {
-                cout << "IF " << endl;
                 // Yield the stored but not returned skmers while sequence is already over
                 do
                 {
                     m_ptr_last_round += 1;
-                    cout << "last round " << (m_ptr_last_round % m_buffer_size) << " ";
                     // Get yielding candidate
                     Skmer<kuint>& skmer {m_skmer_buffer_array[m_ptr_last_round % m_buffer_size]};
-                    cout << skmer.m_pref_size << " " << skmer.m_suff_size << endl;
 
                     // Yield if needed
                     if (skmer.m_pref_size + skmer.m_suff_size >= k - m)
@@ -183,6 +178,7 @@ public:
                     // Set the suffix size of the ooc skmer
                     m_skmer_buffer_array[m_ptr_min % m_buffer_size].m_suff_size = k - m;
                     // TODO: recompute the previous minimizer
+                    this->recompute_minimizer(m_ptr_min + 1, m_ptr_current);
                 }
                 
 
@@ -204,10 +200,8 @@ public:
 
                 // -- A new minimizer has been discovered
                 if (candidate_minimizer < m_current_minimizer) {
-                    cout << "new minimizer @" << (m_ptr_current % m_buffer_size) << endl;
                     // 1 - Prefix the new skmer
                     candidate.m_pref_size = k - m;
-                    cout << "pref " << candidate.m_pref_size << endl;
 
                     // 2 - define the suffix of the previous skmer that was including the minimizer
                     Skmer<kuint>& mini_skmer {m_skmer_buffer_array[m_ptr_min % m_buffer_size]};
@@ -235,37 +229,7 @@ public:
                 // The candidate minimizer is the same than the previous minimizer
                 else if (candidate_minimizer == m_current_minimizer)
                 {
-                    cout << "equal minimizer" << endl;
-                    const uint64_t pos_diff {m_ptr_current - m_ptr_min};
-                    Skmer<kuint>& current_skmer {m_skmer_buffer_array[m_ptr_current % m_buffer_size]};
-                    Skmer<kuint>& prev_skmer {m_skmer_buffer_array[m_ptr_min % m_buffer_size]};
-
-                    // 0 - Due to the way that we encode skmers, the no suffix kmer in the current skmer will always be with the previous skmer.
-                    uint64_t first_kmer_in_new_skmer {1};
-
-                    // 1 - Scan all the kmer shared between the 2 skmers to decide where is the limit between the 2 skmers
-                    for ( ; first_kmer_in_new_skmer < k - m - pos_diff ; first_kmer_in_new_skmer++)
-                    {
-                        const uint64_t prev_skmer_km_pos {first_kmer_in_new_skmer + pos_diff};
-
-                        // 2 - The shared kmer is part of the new skmer
-                        if (m_manip.kmer_lt_kmer(current_skmer, first_kmer_in_new_skmer, prev_skmer, prev_skmer_km_pos))
-                            break;
-                    }
-
-                    const uint64_t nb_kmers_in_prev {first_kmer_in_new_skmer};
-
-                    // 3 - Update suffix of the previous skmer and prefix of the new skmer
-                    prev_skmer.m_suff_size = nb_kmers_in_prev;
-                    current_skmer.m_pref_size = k - m - nb_kmers_in_prev;
-
-                    // If end of the sequence
-                    const int64_t remaining_prev {m_remaining_nucleotides + static_cast<int64_t>(pos_diff)};
-                    if (remaining_prev < 0)
-                        prev_skmer.m_suff_size = std::min(prev_skmer.m_suff_size, static_cast<uint16_t>(k - m +remaining_prev));
-
-
-                    m_ptr_min = m_ptr_current;
+                    this->update_on_equal_mini(m_ptr_current);
                 }
 
                 // Correction of the prefix size for the beginning of the sequence
@@ -273,7 +237,6 @@ public:
                 {
                     uint16_t max_prefix {static_cast<uint16_t>(m_ptr_current - (k - 1))};
                     candidate.m_pref_size = std::min(candidate.m_pref_size, max_prefix);
-                    cout << "corrected pref " << candidate.m_pref_size << endl;
                 }
 
                 // -- Yield if needed
@@ -285,27 +248,104 @@ public:
 
             } // End of the while over the sequence
 
-            // TODO: End of the sequence, register the last suffix
+            Skmer<kuint>& last_skmer = m_skmer_buffer_array[m_ptr_min % m_buffer_size];
+            last_skmer.m_suff_size = m_ptr_current - m_ptr_min;
             
             // Recursive call to return the already computed skmer array
-            // TODO: ?????????
             m_ptr_last_round = m_ptr_current;
             return this->operator++();
         }
 
+        void update_on_equal_mini(uint64_t ptr_equivalent)
+        {
+            static const uint64_t k{m_manip.k};
+            static const uint64_t m{m_manip.m};
+
+            const uint64_t pos_diff {ptr_equivalent - m_ptr_min};
+            Skmer<kuint>& current_skmer {m_skmer_buffer_array[ptr_equivalent % m_buffer_size]};
+            Skmer<kuint>& prev_skmer {m_skmer_buffer_array[m_ptr_min % m_buffer_size]};
+
+            // 0 - Due to the way that we encode skmers, the no suffix kmer in the current skmer will always be with the previous skmer.
+            uint64_t first_kmer_in_new_skmer {1};
+
+            // 1 - Scan all the kmer shared between the 2 skmers to decide where is the limit between the 2 skmers
+            for ( ; first_kmer_in_new_skmer < k - m - pos_diff ; first_kmer_in_new_skmer++)
+            {
+                const uint64_t prev_skmer_km_pos {first_kmer_in_new_skmer + pos_diff};
+
+                // 2 - The shared kmer is part of the new skmer
+                if (m_manip.kmer_lt_kmer(current_skmer, first_kmer_in_new_skmer, prev_skmer, prev_skmer_km_pos))
+                    break;
+            }
+
+            const uint64_t nb_kmers_in_prev {first_kmer_in_new_skmer};
+
+            // 3 - Update suffix of the previous skmer and prefix of the new skmer
+            prev_skmer.m_suff_size = nb_kmers_in_prev;
+            current_skmer.m_pref_size = k - m - nb_kmers_in_prev;
+
+            // If end of the sequence
+            const int64_t remaining_prev {m_remaining_nucleotides + static_cast<int64_t>(pos_diff)};
+            if (remaining_prev < 0)
+                prev_skmer.m_suff_size = std::min(prev_skmer.m_suff_size, static_cast<uint16_t>(k - m +remaining_prev));
+
+
+            m_ptr_min = ptr_equivalent;
+        }
+
+        /** Compute the dominant minimizer in the slice of the buffer. If multiple identical minimizers are present
+         * it will initialize all the prefixes and suffixes of skmers needed to reach the last one.
+         * @param buff_start First buffer coordinate to analyse (absolute value)
+         * @param buff_stop Last buffer coordinate to analyse (absolute value)
+         **/
         void recompute_minimizer(uint64_t buff_start, uint64_t buff_stop)
         {
+            // 0 - Select first candidate
+            Skmer<kuint>& first = m_skmer_buffer_array[buff_start % m_buffer_size];
+            m_current_minimizer = m_manip.minimizer(first);
+            m_ptr_min = buff_start;
+            uint64_t nb_identical = 1;
 
+            // 1 - Compute the minimizer in the window
+            for (uint64_t idx{buff_start+1} ; idx<=buff_stop ; idx++)
+            {
+                Skmer<kuint>& candidate = m_skmer_buffer_array[idx % m_buffer_size];
+                kuint candidate_minimizer = m_manip.minimizer(candidate);
+
+                if (candidate_minimizer < m_current_minimizer)
+                {
+                    m_current_minimizer = candidate_minimizer;
+                    m_ptr_min = idx;
+                    nb_identical = 1;
+                }
+                else if (candidate_minimizer == m_current_minimizer)
+                {
+                    nb_identical += 1;
+                }
+            }
+
+            // 2 - For each skmer with the minimizer compute pref/suff sizes
+            m_skmer_buffer_array[m_ptr_min % m_buffer_size].m_pref_size = m_ptr_min - buff_start;
+
+            // Multiple identical minimizers
+            if (nb_identical > 1)
+            {
+                // Iterate over the buffer to find identical minimizers
+                for (uint64_t idx{m_ptr_min+1} ; idx<=buff_stop ; idx++)
+                {
+                    Skmer<kuint>& candidate {m_skmer_buffer_array[idx % m_buffer_size]};
+                    if (m_manip.minimizer(candidate) == m_current_minimizer)
+                        this->update_on_equal_mini(idx);
+                }
+            }
         }
 
 
         // Warning: This function suppose that we are comparing iterator over the same sequence.
         bool operator==(const Iterator& it) const
         {
-            cout << "== " << m_consumed << endl;
             if (m_consumed and it.m_consumed)
                 return true;
-            cout << "number of remaining nucleotides" << endl;
 
             return m_remaining_nucleotides == it.m_remaining_nucleotides;
         }
