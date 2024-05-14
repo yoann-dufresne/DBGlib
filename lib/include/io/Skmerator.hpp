@@ -293,6 +293,11 @@ public:
             return this->operator++();
         }
 
+        void recompute_minimizer(uint64_t buff_start, uint64_t buff_stop)
+        {
+
+        }
+
 
         // Warning: This function suppose that we are comparing iterator over the same sequence.
         bool operator==(const Iterator& it) const
@@ -306,6 +311,8 @@ public:
         }
 
     };
+
+    
     
 
     Iterator begin() { return Iterator(*this, m_seq); }
