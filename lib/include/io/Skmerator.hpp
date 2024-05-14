@@ -85,7 +85,8 @@ public:
     protected:
         // Construct an iterator without control on the file stream
         Iterator(SeqSkmerator& skmerator, const std::string& sequence)
-            : m_rator(skmerator), m_seq(sequence), m_remaining_nucleotides(sequence.length()), m_consumed(false)
+            : m_rator(skmerator), m_seq(sequence), m_remaining_nucleotides(sequence.length())
+            , m_consumed(false)
             , m_manip(skmerator.m_manip), m_current_minimizer(~static_cast<kuint>(0))
             , m_buffer_size(2 * skmerator.m_manip.k - skmerator.m_manip.m)
             , m_skmer_buffer_array(new Skmer<kuint>[m_buffer_size])
@@ -282,6 +283,9 @@ public:
         // Warning: This function suppose that we are comparing iterator over the same sequence.
         bool operator==(const Iterator& it) const
         {
+            if (m_consumed and it.m_consumed)
+                return true;
+
             return m_remaining_nucleotides == it.m_remaining_nucleotides;
         }
 
