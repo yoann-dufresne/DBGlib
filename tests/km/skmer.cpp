@@ -156,7 +156,7 @@ TEST(SkmerManipulator, minimizer_extraction)
     const string seq {"TCAAGCATGTTAG"};
     km::SkmerManipulator<kuint> manip {k, m};
 
-    for (int i {0}; i < k-m+1; i++)
+    for (uint64_t i {0}; i < k-m+1; i++)
     {
         kuint nucl {static_cast<kuint>((seq[i] >> 1) & 0b11)};
         manip.add_nucleotide(nucl);
@@ -164,7 +164,7 @@ TEST(SkmerManipulator, minimizer_extraction)
     
     kuint expected_minimizer[] {0b0011, 0b0001, 0b0000, 0b1001, 0b0111, 0b0001, 0b1000, 0b0001, 0b0100};
 
-    for (int i {k-m+1}; i < seq.length(); i++)
+    for (uint64_t i {k-m+1}; i < seq.length(); i++)
     {
         kuint nucl {static_cast<kuint>((seq[i] >> 1) & 0b11)};
         manip.add_nucleotide(nucl);

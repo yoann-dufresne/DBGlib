@@ -35,9 +35,9 @@ public:
     {}
     Skmer(const pair& value, uint16_t prefix_size, uint16_t suffix_size) : m_pair(value), m_pref_size(prefix_size), m_suff_size(suffix_size)
     {}
-    Skmer(Skmer& other) : m_pair(other.m_pair), m_pref_size(other.m_pref_size), m_suff_size(other.m_suff_size)
+    Skmer(const Skmer& other) : m_pair(other.m_pair), m_pref_size(other.m_pref_size), m_suff_size(other.m_suff_size)
     {}
-    Skmer(Skmer&& other) : m_pair(other.m_pair), m_pref_size(other.m_pref_size), m_suff_size(other.m_suff_size)
+    Skmer(const Skmer&& other) : m_pair(other.m_pair), m_pref_size(other.m_pref_size), m_suff_size(other.m_suff_size)
     {}
 
     Skmer<kuint>& operator= (const Skmer<kuint>& other)
@@ -255,9 +255,9 @@ public:
                     , sk_size(2*k-m), m_suff_size(sk_size / 2), m_pref_size((sk_size+1) / 2)
     {};
 
-    SkmerPrettyPrinter& operator<< (Skmer<kuint>* skmer)
+    SkmerPrettyPrinter& operator<< (const Skmer<kuint>* skmer)
     {
-        m_skmer = skmer;
+        m_skmer = const_cast<Skmer<kuint>*>(skmer);
         return *this;
     }
 
@@ -339,6 +339,12 @@ public:
         // Skmers
         m_fwd = Skmer<kuint>{};
         m_rev = Skmer<kuint>{};
+    }
+
+    bool skmer_equals(const km::Skmer<kuint>& left, const km::Skmer<kuint>& right)
+    {
+        // TODO
+        return false;
     }
 
     /** Add a binarized nucleotide (2bits) to the current skmer.

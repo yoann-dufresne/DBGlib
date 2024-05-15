@@ -19,20 +19,27 @@ template <typename kuint>
 class FileSkmerator;
 
 
+
 // ----------------------- NEW SEQ ITERATOR ---------------------------
 
 template <typename kuint>
 class SeqSkmerator
 {
 protected:
+    std::string empty_str{};
+    
     SkmerManipulator<kuint>& m_manip;
-    const std::string& m_seq;
+    std::string& m_seq;
     Skmer<kuint> m_yielded_skmer;
 
 public:
 
-    SeqSkmerator(SkmerManipulator<kuint>& skmer_manipulator, const std::string& sequence)
+    SeqSkmerator(SkmerManipulator<kuint>& skmer_manipulator, std::string& sequence)
         : m_manip(skmer_manipulator), m_seq(sequence)
+    {};
+
+    SeqSkmerator(SkmerManipulator<kuint>& skmer_manipulator) 
+        : SeqSkmerator(skmer_manipulator, empty_str)
     {};
 
     SeqSkmerator& operator=(const SeqSkmerator& other)
@@ -52,11 +59,10 @@ public:
     {
 
     private:
-        const std::string empty_str{};
-
+        std::string empty_str{};
         // Sequence file related attributes
         SeqSkmerator<kuint>& m_rator;
-        const std::string& m_seq;
+        std::string& m_seq;
         int64_t m_remaining_nucleotides;
         bool m_consumed;
 
@@ -65,7 +71,7 @@ public:
         kuint m_current_minimizer;
 
         // Buffered unmasked skmers
-        const uint64_t m_buffer_size;
+        uint64_t m_buffer_size;
         Skmer<kuint>* m_skmer_buffer_array;
         uint64_t m_ptr_current;
         uint64_t m_ptr_min;
@@ -84,7 +90,7 @@ public:
 
     protected:
         // Construct an iterator without control on the file stream
-        Iterator(SeqSkmerator& skmerator, const std::string& sequence)
+        Iterator(SeqSkmerator& skmerator, std::string& sequence)
             : m_rator(skmerator), m_seq(sequence), m_remaining_nucleotides(sequence.length())
             , m_consumed(false)
             , m_manip(skmerator.m_manip), m_current_minimizer(~static_cast<kuint>(0))
@@ -108,6 +114,28 @@ public:
             : Iterator(skmerator, empty_str)
 
         {};
+
+        Iterator& operator=(Iterator& other)
+        {
+            m_rator = other.m_rator;
+            m_seq = other.m_seq;
+            m_remaining_nucleotides = other.m_remaining_nucleotides;
+            m_consumed = other.m_consumed;
+            m_manip = other.m_manip;
+            m_current_minimizer = other.m_current_minimizer;
+            
+            m_buffer_size = other.m_buffer_size;
+            delete[] m_skmer_buffer_array;
+            m_skmer_buffer_array = new Skmer<kuint>[m_buffer_size];
+            for (uint64_t idx{0} ; idx<m_buffer_size ; idx++)
+                m_skmer_buffer_array [idx] = other.m_skmer_buffer_array[idx];
+
+            m_ptr_current = other.m_ptr_current;
+            m_ptr_min = other.m_ptr_min;
+            m_ptr_last_round = other.m_ptr_last_round;
+
+            return *this;
+        }
 
         void init_seq()
         {
@@ -342,7 +370,7 @@ public:
 
 
         // Warning: This function suppose that we are comparing iterator over the same sequence.
-        bool operator==(const Iterator& it) const
+        bool operator==(Iterator& it) const
         {
             if (m_consumed and it.m_consumed)
                 return true;
@@ -352,9 +380,6 @@ public:
 
     };
 
-    
-    
-
     Iterator begin() { return Iterator(*this, m_seq); }
     Iterator end() { return Iterator(*this); }
 };
@@ -363,113 +388,122 @@ public:
 // ----------------------- /NEW SEQ ITERATOR ---------------------------
 
 
-// template <typename kuint>
-// class FileSkmerator
-// {
-// protected:
-//     const std::string& m_filename;
-//     SkmerManipulator<kuint>& m_manip;
+template <typename kuint>
+class FileSkmerator
+{
+protected:
+    std::string m_filename;
+    SkmerManipulator<kuint>& m_manip;
 
-// public:
-//     FileSkmerator(const std::string& filename, SkmerManipulator<kuint>& manipulator)
-//         : m_filename(filename), m_manip(manipulator)
-//     {};
+public:
+    FileSkmerator(SkmerManipulator<kuint>& manipulator, const std::string& filename)
+        : m_filename(std::string{filename}), m_manip(manipulator)
+    {};
 
-//     struct Iterator
-//     {
+    FileSkmerator<kuint>& operator=(const FileSkmerator<kuint>& other)
+    {
+        m_filename = other.m_filename;
+        m_manip = other.m_manip;
 
-//     private:
-//         // Sequence file related attributes
-//         FileSkmerator<kuint>& m_rator;
-//         std::unique_ptr<klibpp::SeqStreamIn> m_ptr;
-//         klibpp::KSeq m_record;
-//         // skmer sequence enumerator
-//         SeqSkmerator<kuint> m_seq_rator;
-//         SeqSkmerator<kuint>::Iterator m_skmer_iterator;
+        return *this;
+    }
 
-//     protected:
-//         // Construct an iterator without control on the file stream
-//         Iterator(FileSkmerator& skmerator, std::unique_ptr<klibpp::SeqStreamIn> stream_ptr)
-//             : m_rator(skmerator), m_ptr(std::move(stream_ptr))
-//         {
-//             if (m_ptr == nullptr)
-//                 return;
+    struct Iterator
+    {
 
-//             this->init_record();
-//             this->operator++();
-//         }
+    private:
+        // Sequence file related attributes
+        FileSkmerator<kuint>& m_rator;
+        std::unique_ptr<klibpp::SeqStreamIn> m_ptr;
+        klibpp::KSeq m_record;
+        // skmer sequence enumerator
+        SeqSkmerator<kuint> m_seq_rator;
+        SeqSkmerator<kuint>::Iterator m_skmer_iterator;
 
-//         // Construct a new file stream from the filename
-//         Iterator(FileSkmerator& skmerator)
-//             : Iterator ( skmerator, std::make_unique<klibpp::SeqStreamIn>(skmerator.m_filename.c_str()) )
-//         {}
+    protected:
+        // Construct an iterator without control on the file stream
+        Iterator(FileSkmerator<kuint>& skmerator, std::unique_ptr<klibpp::SeqStreamIn> stream_ptr)
+            : m_rator(skmerator), m_ptr(std::move(stream_ptr))
+            , m_seq_rator(skmerator.m_manip), m_skmer_iterator(m_seq_rator.begin())
+        {
+            if (m_ptr == nullptr)
+                return;
 
-//         void init_record()
-//         {
-//             // cout << "init_record" << endl;
-//             do
-//             {
-//                 if ((*m_ptr) >> m_record)
-//                 {
-//                     // If sequence is too short, skip it
-//                     if (m_record.seq.length() < m_rator.m_manip.k) {
-//                         continue;
-//                     }
+            this->init_record();
+            this->operator++();
+        }
 
-//                     m_seq_rator = SeqSkmerator(m_record.seq);
-//                     m_skmer_iterator = m_seq_rator.begin();
-//                 }
-//                 else
-//                 {
-//                     // No more sequence to read from the file
-//                     m_ptr = nullptr;
-//                     return;
-//                 }
-//             }
-//             while (m_skmer_iterator.consumed());
-//         }
+        // Construct a new file stream from the filename
+        Iterator(FileSkmerator<kuint>& skmerator)
+            : Iterator ( skmerator, std::make_unique<klibpp::SeqStreamIn>(skmerator.m_filename.c_str()) )
+        {}
 
-//         friend class FileSkmerator;
+        void init_record()
+        {
+            // cout << "init_record" << endl;
+            do
+            {
+                if ((*m_ptr) >> m_record)
+                {
+                    // If sequence is too short, skip it
+                    if (m_record.seq.length() < m_rator.m_manip.k) {
+                        continue;
+                    }
 
-//     public:
-//         // Return kmer by value
-//         Skmer<kuint> operator*() const
-//         {
-//             return m_seq_rator.current_skmer();
-//         }
+                    m_seq_rator = SeqSkmerator<kuint>(m_rator.m_manip, m_record.seq);
+                    m_skmer_iterator = m_seq_rator.begin();
+                }
+                else
+                {
+                    // No more sequence to read from the file
+                    m_ptr = nullptr;
+                    return;
+                }
+            }
+            while (m_skmer_iterator.consumed());
+        }
 
-//         Iterator& operator++()
-//         {
-//             // File already consumed
-//             if (m_ptr == nullptr)
-//                 return *this;
+        friend class FileSkmerator;
 
-//             // Go to next sequence
-//             if (m_skmer_iterator.consumed())
-//             {
-//                 this->init_record();
+    public:
+        // Return kmer by value
+        Skmer<kuint> operator*()
+        {
+            return m_seq_rator.current_skmer();
+        }
+
+        Iterator& operator++()
+        {
+            // File already consumed
+            if (m_ptr == nullptr)
+                return *this;
+
+            // Go to next sequence
+            if (m_skmer_iterator.consumed())
+            {
+                this->init_record();
                 
-//                 // reached the end of the file while looking for the next sequence
-//                 if (m_ptr == nullptr)
-//                     return *this;
-//             }
+                // reached the end of the file while looking for the next sequence
+                if (m_ptr == nullptr)
+                    return *this;
+            }
 
-//             m_skmer_iterator.operator++();
-//             return *this;
-//         }
+            m_skmer_iterator.operator++();
+            return *this;
+        }
 
 
-//         bool operator==(const Iterator& it) const
-//         {
-//             return m_rator.m_filename == it.m_rator.m_filename and m_ptr == it.m_ptr;
-//         }
+        bool operator==(const Iterator& it) const
+        {
+            return m_rator.m_filename == it.m_rator.m_filename and m_ptr == it.m_ptr;
+        }
 
-//     };
+    };
     
 
-//     Iterator begin() { return Iterator(*this); }
-//     Iterator end() { return Iterator(*this, nullptr); }
-// };
+    Iterator begin() { return Iterator(*this); }
+    Iterator end() { return Iterator(*this, nullptr); }
+};
 
 
 }
