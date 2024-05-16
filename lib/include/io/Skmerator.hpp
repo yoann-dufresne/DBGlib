@@ -115,13 +115,12 @@ public:
 
         {};
 
-        Iterator& operator=(Iterator& other)
+        Iterator& operator=(const Iterator& other)
         {
             m_rator = other.m_rator;
             m_seq = other.m_seq;
             m_remaining_nucleotides = other.m_remaining_nucleotides;
             m_consumed = other.m_consumed;
-            m_manip = other.m_manip;
             m_current_minimizer = other.m_current_minimizer;
             
             m_buffer_size = other.m_buffer_size;

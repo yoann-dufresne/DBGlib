@@ -313,6 +313,9 @@ protected:
     const Skmer<kuint>::pair max_pair_value;
     const kpair m_mask;
 
+    kpair* m_pref_masks;
+    kpair* m_suff_masks;
+
     // // The amount of bit shifts needed to reach the 4 most significant bits of a kuint
     // static constexpr uint64_t uints_middle_shift {sizeof(kuint) * 8 - 4};
 
@@ -324,8 +327,25 @@ public:
     {
         assert((k*2-m+3) / 4 <= 2*sizeof(kuint));
 
+        // Compute all the possible prefix/suffix masks
+        m_pref_masks = new kpair[k-m+1];
+        m_suff_masks = new kpair[k-m+1];
+
+        // TODO
+
+        for (int64_t i{k-m-1} ; i>0 ; i--)
+        {
+
+        }
+
         // Skmer and skmer buffers init
         this->init_skmer();
+    }
+
+    ~SkmerManipulator()
+    {
+        delete[] m_pref_masks;
+        delete[] m_suff_masks;
     }
 
     void init_skmer()
@@ -343,7 +363,13 @@ public:
 
     bool skmer_equals(const km::Skmer<kuint>& left, const km::Skmer<kuint>& right)
     {
-        // TODO
+        if ((left.m_pref_size != right.m_pref_size) or (left.m_suff_size != right.m_suff_size))
+            return false;
+
+        // TODO : Compute mask
+
+        // TODO : Compare masked kpairs
+
         return false;
     }
 
