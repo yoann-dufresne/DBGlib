@@ -274,17 +274,19 @@ public:
 template<typename kuint>
 std::ostream& operator<<(std::ostream& os, const SkmerPrettyPrinter<kuint> pp)
 {
+    const uint64_t k {pp.k};
+    const uint64_t m {pp.m};
     static const char nucleotides[] = {'A', 'C', 'T', 'G'};
     os << "[skmer not interleaved: ";
 
     // Forward prefix
-    for (uint64_t pref_idx{0} ; pref_idx<pp.m_pref_size ; pref_idx++)
+    for (uint64_t pref_idx{k-m-pp.m_skmer->m_pref_size} ; pref_idx<pp.m_pref_size ; pref_idx++)
     {
         os << nucleotides[((*pp.m_skmer).m_pair >> (4 * pref_idx)) & 0b11UL];
     }
     os << " ";
     // Forward suffix
-    for (uint64_t suf_idx{pp.m_suff_size} ; suf_idx>0 ; suf_idx--)
+    for (uint64_t suf_idx{pp.m_suff_size} ; suf_idx>(k-m-pp.m_skmer->m_suff_size) ; suf_idx--)
     {
         os << nucleotides[((*pp.m_skmer).m_pair >> (4 * suf_idx - 2)) & 0b11UL];
     }

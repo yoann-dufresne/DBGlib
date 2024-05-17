@@ -117,13 +117,17 @@ TEST(Skmerator, file_vs_seq)
     km::SkmerManipulator<kuint> file_manip {k, m};
     km::FileSkmerator<kuint> file_skmerator {file_manip, filename};
 
+
     // Enumerates the superkmers from the file
     std::vector<km::Skmer<kuint> > file_skmers {};
     for (km::Skmer<kuint> skmer : file_skmerator)
         file_skmers.push_back(skmer);
+    
+    cout << "file vs sequence" << endl;
+    cout << "file:" << file_skmers.size() << " seq:" << seq_skmers.size() << endl;
 
     // Comparison of size
-    if (seq_skmers.size() != file_skmers.size())
+    if (seq_skmers.size() == file_skmers.size())
     {
         std::cout << "from sequence" << std::endl;
         for (const auto& skmer : seq_skmers)
