@@ -382,23 +382,18 @@ public:
 
     bool skmer_equals(const km::Skmer<kuint>& left, const km::Skmer<kuint>& right)
     {
-        cout << "equals" << endl;
-        cout << left << endl;
-        cout << right << endl;
-
         if ((left.m_pref_size != right.m_pref_size) or (left.m_suff_size != right.m_suff_size))
             return false;
 
         kpair& pref_mask = m_pref_masks[left.m_pref_size];
         kpair& suff_mask = m_suff_masks[left.m_suff_size];
         kpair pair_mask {pref_mask | m_minimizer_mask | suff_mask};
-        cout << pair_mask << endl;
 
         kpair left_masked {left.m_pair & pair_mask};
-        // kpair right_masked {right.m_pair & pair_mask};
+        kpair right_masked {right.m_pair & pair_mask};
 
-        // return left_masked == right_masked;
-        return false;
+        return left_masked == right_masked;
+        // return false;
     }
 
     /** Add a binarized nucleotide (2bits) to the current skmer.

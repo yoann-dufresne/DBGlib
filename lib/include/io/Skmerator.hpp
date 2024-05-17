@@ -20,7 +20,7 @@ class FileSkmerator;
 
 
 
-// ----------------------- NEW SEQ ITERATOR ---------------------------
+// ----------------------- SEQ ITERATOR ---------------------------
 
 template <typename kuint>
 class SeqSkmerator
@@ -384,7 +384,7 @@ public:
 };
 
 
-// ----------------------- /NEW SEQ ITERATOR ---------------------------
+// ----------------------- FILE ITERATOR ---------------------------
 
 
 template <typename kuint>
@@ -429,7 +429,6 @@ public:
                 return;
 
             this->init_record();
-            this->operator++();
         }
 
         // Construct a new file stream from the filename
@@ -473,6 +472,8 @@ public:
 
         Iterator& operator++()
         {
+            m_skmer_iterator.operator++();
+            
             // File already consumed
             if (m_ptr == nullptr)
                 return *this;
@@ -487,7 +488,6 @@ public:
                     return *this;
             }
 
-            m_skmer_iterator.operator++();
             return *this;
         }
 
