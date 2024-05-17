@@ -184,7 +184,7 @@ public:
             return *this;
         }
 
-        pair operator& (const uint64_t value)
+        pair operator& (const uint64_t value) const
         {
             pair p{*this};
             p.m_value[0] &= value;
@@ -197,6 +197,14 @@ public:
             pair p{*this};
             p.m_value[0] |= other.m_value[0];
             p.m_value[1] |= other.m_value[1];
+            return p;
+        }
+
+        pair operator^ (const pair& other) const
+        {
+            pair p{*this};
+            p.m_value[0] ^= other.m_value[0];
+            p.m_value[1] ^= other.m_value[1];
             return p;
         }
 
@@ -313,6 +321,7 @@ protected:
     const Skmer<kuint>::pair max_pair_value;
     const kpair m_mask;
 
+    kpair m_minimizer_mask;
     kpair* m_pref_masks;
     kpair* m_suff_masks;
 
@@ -331,12 +340,20 @@ public:
         m_pref_masks = new kpair[k-m+1];
         m_suff_masks = new kpair[k-m+1];
 
-        // TODO
-
-        for (int64_t i{k-m-1} ; i>0 ; i--)
+        for (uint64_t i{1} ; i<=k-m ; i++)
         {
+            // Prefix mask
+            static const kpair pref_seed {static_cast<kuint>(0b0011)};
+            m_pref_masks[i] = m_pref_masks[i-1] | (pref_seed << (4 * (k - m - i)));
 
+            // Suffix mask
+            static const kpair suff_seed {static_cast<kuint>(0b1100)};
+            m_suff_masks[i] = m_suff_masks[i-1] | (suff_seed << (4 * (k - m - i)));
         }
+
+        // Minimizer mask
+        kpair sub_maks = max_pair_value >> (2 * sizeof(kuint) * 8 - 4 * (k - m));
+        m_minimizer_mask = m_mask ^ sub_maks;
 
         // Skmer and skmer buffers init
         this->init_skmer();
@@ -363,13 +380,22 @@ public:
 
     bool skmer_equals(const km::Skmer<kuint>& left, const km::Skmer<kuint>& right)
     {
+        cout << "equals" << endl;
+        cout << left << endl;
+        cout << right << endl;
+
         if ((left.m_pref_size != right.m_pref_size) or (left.m_suff_size != right.m_suff_size))
             return false;
 
-        // TODO : Compute mask
+        kpair& pref_mask = m_pref_masks[left.m_pref_size];
+        kpair& suff_mask = m_suff_masks[left.m_suff_size];
+        kpair pair_mask {pref_mask | m_minimizer_mask | suff_mask};
+        cout << pair_mask << endl;
 
-        // TODO : Compare masked kpairs
+        kpair left_masked {left.m_pair & pair_mask};
+        // kpair right_masked {right.m_pair & pair_mask};
 
+        // return left_masked == right_masked;
         return false;
     }
 
