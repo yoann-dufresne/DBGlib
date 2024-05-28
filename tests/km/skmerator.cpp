@@ -128,7 +128,7 @@ TEST(Skmerator, outofcontext_minimizer)
 
         //                            Less significant             Most significant
         const kpair expected_pair{expected_values[nb_skmer][1], expected_values[nb_skmer][0]};
-        EXPECT_EQ(expected_pair, skmer.m_pair);
+        ASSERT_EQ(expected_pair, skmer.m_pair);
         
         nb_skmer += 1;
     }

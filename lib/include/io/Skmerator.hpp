@@ -256,6 +256,8 @@ public:
                 // The candidate minimizer is the same than the previous minimizer
                 else if (candidate_minimizer == m_current_minimizer)
                 {
+                    cout << "update == " << m_ptr_current << endl;
+
                     this->update_on_equal_mini(m_ptr_current);
                 }
 
@@ -288,8 +290,6 @@ public:
             const uint64_t k{m_manip.k};
             const uint64_t m{m_manip.m};
 
-            cout << "k:" << k << " m:" << m << endl;
-
             const uint64_t pos_diff {ptr_equivalent - m_ptr_min};
             Skmer<kuint>& current_skmer {m_skmer_buffer_array[ptr_equivalent % m_buffer_size]};
             Skmer<kuint>& prev_skmer {m_skmer_buffer_array[m_ptr_min % m_buffer_size]};
@@ -307,10 +307,11 @@ public:
                     break;
             }
 
+
             const uint64_t nb_kmers_in_prev {first_kmer_in_new_skmer};
 
             // 3 - Update suffix of the previous skmer and prefix of the new skmer
-            prev_skmer.m_suff_size = nb_kmers_in_prev;
+            prev_skmer.m_suff_size = nb_kmers_in_prev; // TODO: Update not correct
             current_skmer.m_pref_size = k - m - nb_kmers_in_prev;
 
             // If end of the sequence
@@ -318,6 +319,16 @@ public:
             if (remaining_prev < 0)
                 prev_skmer.m_suff_size = std::min(prev_skmer.m_suff_size, static_cast<uint16_t>(k - m +remaining_prev));
 
+
+            km::SkmerPrettyPrinter<kuint> pp {k, m};
+            cout << "k:" << k << " m:" << m << endl;
+
+            pp << &prev_skmer;
+            cout << "prev: " << pp << " pref:" << prev_skmer.m_pref_size << " suff:" << prev_skmer.m_suff_size << endl;
+
+            pp << &current_skmer;
+            cout << "current: " << pp << endl;
+            cout << "nb_kmers_in_prev " << nb_kmers_in_prev << endl;
 
             m_ptr_min = ptr_equivalent;
         }
