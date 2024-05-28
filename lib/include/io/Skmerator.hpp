@@ -285,8 +285,10 @@ public:
 
         void update_on_equal_mini(uint64_t ptr_equivalent)
         {
-            static const uint64_t k{m_manip.k};
-            static const uint64_t m{m_manip.m};
+            const uint64_t k{m_manip.k};
+            const uint64_t m{m_manip.m};
+
+            cout << "k:" << k << " m:" << m << endl;
 
             const uint64_t pos_diff {ptr_equivalent - m_ptr_min};
             Skmer<kuint>& current_skmer {m_skmer_buffer_array[ptr_equivalent % m_buffer_size]};
