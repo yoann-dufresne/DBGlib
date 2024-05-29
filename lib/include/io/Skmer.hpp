@@ -438,11 +438,15 @@ public:
         // --- Merge the interleaved halves ---
         m_fwd = m_fwd_prefix_buff | m_fwd_suffix_buff;
         m_rev = m_rev_prefix_buff | m_rev_suffix_buff;
+
+        cout << "[add_nucleotide] prefix_size: " << m_pref_size << " suffix size: " << m_suff_size << endl;
         
-        if (m_rev < m_fwd)
-            return m_rev;
-        else
-            return m_fwd;
+        if (m_rev < m_fwd){
+            cout << "[add_nucleotide] yielding reverse" << endl;
+            return m_rev;}
+        else {
+            cout << "[add_nucleotide] yielding forward" << endl;
+            return m_fwd; }
     }
 
     kuint minimizer() const
@@ -485,14 +489,21 @@ public:
         const uint64_t first_mask_size {(k-m)/2 > first_kmer_pos ? first_kmer_pos * 2 - 1 : 2 * (k - m - first_kmer_pos) };
         const uint64_t second_mask_size {(k-m)/2 > second_kmer_pos ? second_kmer_pos * 2 - 1 : 2 * (k - m - second_kmer_pos) };
         const uint64_t mask_size {std::max(first_mask_size, second_mask_size) * 2};
-        
-        // 2 - Compare masked kmers
-        // check if first skmer shifted right of mask is < second skmer shifted right of mask  
-        const auto first_kmer {first_skmer.m_pair >> mask_size};
-        const auto second_kmer {second_skmer.m_pair >> mask_size};  
 
-        if (first_kmer != second_kmer) 
-            return first_kmer < second_kmer;        
+        cout << "[KMER < KMER]" << endl;
+        cout << "1st mask size = " << first_mask_size << " 2nd mask " << second_mask_size << " -> mask size in bits: " << mask_size << endl;
+
+        // 2 - Compare masked kmers
+        // check if first skmer shifted right of mask is < second skmer shifted right of mask 
+        cout << "c:   " << first_skmer.m_pair << endl << "p:   " << second_skmer.m_pair << endl;
+
+        const auto first_kmer {first_skmer.m_pair >> mask_size};
+        const auto second_kmer {second_skmer.m_pair >> mask_size};
+        cout << "c_m: " << first_kmer << endl << "p_m: " << second_kmer << endl;
+
+        if (first_kmer != second_kmer){
+            cout << "current < previous: (1=true/0=false) " << (first_kmer < second_kmer) << endl;
+            return first_kmer < second_kmer;}
         
         // 4 - If equals => true if second skmer is the first one to miss a nucleotide (left based)
         return first_mask_size < second_mask_size;
