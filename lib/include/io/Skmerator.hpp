@@ -203,8 +203,8 @@ public:
 
                 // -- Save the skmer to eventually yield
                 m_rator.m_yielded_skmer = m_skmer_buffer_array[(m_ptr_current + 1) % m_buffer_size];
-                pp << &m_rator.m_yielded_skmer;
-                cout << "Storing skmer from buffer[" << (m_ptr_current + 1) % m_buffer_size << "] == " << pp << endl;
+                //pp << &m_rator.m_yielded_skmer;
+                //cout << "Storing skmer from buffer[" << (m_ptr_current + 1) % m_buffer_size << "] == " << pp << endl;
 
                 // -- On out of context minimizer
                 if (m_ptr_current - m_ptr_min >= k - m)
@@ -214,28 +214,12 @@ public:
                     m_skmer_buffer_array[m_ptr_min % m_buffer_size].m_suff_size = k - m;
                     // TODO: recompute the previous minimizer
                     this->recompute_minimizer(m_ptr_min + 1, m_ptr_current);
+                    cout << "MINIMAL SKMER AT POSITION " << m_ptr_min << " with minimizer " << m_current_minimizer <<  endl;
+                    
                 }
                 
-                // -- Compute the new candidate skmer
-                m_remaining_nucleotides -= 1;
-                m_ptr_current += 1;
-
-                // Get the next skmer 
-                // If we reach the end of the sequence we add fake nucleotides (0b11) to complete the last skmer  
-                const kuint nucl {
-                    m_remaining_nucleotides >= 0 ?(static_cast<kuint>((m_seq[m_ptr_current] >> 1) & 0b11U)) : static_cast<kuint>(0b11U)};
-                
-                // add nucleotide to the current candidate superkmer
-                pp << &m_skmer_buffer_array[m_ptr_current% m_buffer_size];
-                cout << "(Before add_nucleotide " << ((m_seq[m_ptr_current] >> 1) & 0b11U) << " ) buffer[" << (m_ptr_current%m_buffer_size) << "] == " << pp << endl;
-                //cout << "Prefix: " << m_skmer_buffer_array[m_ptr_current% m_buffer_size].m_pref_size << " ; suffix: " << m_skmer_buffer_array[m_ptr_current% m_buffer_size].m_suff_size << endl;
-
-                m_skmer_buffer_array[ m_ptr_current % m_buffer_size ] = m_manip.add_nucleotide(nucl);
-                Skmer<kuint>& candidate {m_skmer_buffer_array[ m_ptr_current % m_buffer_size ]};
-
-                pp << &m_skmer_buffer_array[m_ptr_current% m_buffer_size];
-                cout << "(After add_nucleotide " << ((m_seq[m_ptr_current] >> 1) & 0b11U) << " ) buffer[" << (m_ptr_current%m_buffer_size) << "] == " << pp << endl;
-                //cout << "Prefix: " << m_skmer_buffer_array[m_ptr_current% m_buffer_size].m_pref_size << " ; suffix: " << m_skmer_buffer_array[m_ptr_current% m_buffer_size].m_suff_size << endl;
+                // Get the next candidate skmer
+                Skmer<kuint>& candidate {compute_new_candidate_skmer()};
                 
                 // Get the minimizer
                 const kuint candidate_minimizer {m_manip.minimizer(candidate)};
@@ -269,7 +253,6 @@ public:
                     // 4 - save the new current minimal skmer and minimizer
                     m_ptr_min = m_ptr_current;
                     m_current_minimizer = candidate_minimizer;
-                    cout << "MINIMAL SKMER AT POSITION " << m_ptr_min << endl;
                 }
 
                 // The candidate minimizer is the same than the previous minimizer
@@ -279,7 +262,7 @@ public:
 
                     this->update_on_equal_mini(m_ptr_current);
                 }
-
+                cout << "MINIMAL SKMER AT POSITION " << m_ptr_min << " with minimizer " << m_current_minimizer <<  endl;
                 // Correction of the prefix size for the beginning of the sequence
                 if (m_ptr_current < 2 * k - m - 1)
                 {
@@ -290,7 +273,9 @@ public:
                 // -- Yield if needed
                 if (m_rator.m_yielded_skmer.m_pref_size + m_rator.m_yielded_skmer.m_suff_size >= k - m)
                 {
-                    cout << "Masking absent nucleotides" << endl;
+                    cout << "[If needed] Yielding ";
+                    pp << &m_rator.m_yielded_skmer;
+                    cout << pp << endl;
                     m_manip.mask_absent_nucleotides(m_rator.m_yielded_skmer);
                     return *this;
                 }
@@ -303,6 +288,20 @@ public:
             // Recursive call to return the already computed skmer array
             m_ptr_last_round = m_ptr_current;
             return this->operator++();
+        }
+
+        Skmer<kuint>& compute_new_candidate_skmer()
+        {
+            // -- Compute the new candidate skmer
+            m_remaining_nucleotides -= 1;
+            m_ptr_current += 1;
+
+            const kuint nucl {
+                    m_remaining_nucleotides >= 0 ?(static_cast<kuint>((m_seq[m_ptr_current] >> 1) & 0b11U)) : static_cast<kuint>(0b11U)};
+            
+            m_skmer_buffer_array[ m_ptr_current % m_buffer_size ] = (m_remaining_nucleotides >= 0) ? m_manip.add_nucleotide(nucl) : m_manip.add_empty_nucleotide();
+            //m_manip.add_nucleotide(nucl);
+            return m_skmer_buffer_array[ m_ptr_current % m_buffer_size ];
         }
 
         void update_on_equal_mini(uint64_t ptr_equivalent)
@@ -335,7 +334,6 @@ public:
                 cout << "current: " << pp << endl;
                 current_skmer.m_pref_size = f_old_pref;
                 current_skmer.m_suff_size = f_old_suff;   
-
 
                 const uint64_t s_old_pref {prev_skmer.m_pref_size};
                 const uint64_t s_old_suff {prev_skmer.m_suff_size};

@@ -430,7 +430,8 @@ public:
         // Shift the prefix
         m_rev_prefix_buff <<= 4;
         // Add the new complement nucleotide
-        const auto compl_nucl {static_cast<kuint>((nucl + 2) % 4)};
+        const kuint compl_nucl{ static_cast<kuint>((nucl + 2) % 4)};
+
         m_rev_prefix_buff |= compl_nucl;
         // Remove the transfered nucleotide
         m_rev_prefix_buff &= m_mask;
@@ -439,14 +440,60 @@ public:
         m_fwd = m_fwd_prefix_buff | m_fwd_suffix_buff;
         m_rev = m_rev_prefix_buff | m_rev_suffix_buff;
 
-        cout << "[add_nucleotide] prefix_size: " << m_pref_size << " suffix size: " << m_suff_size << endl;
+        cout << "[ADD NUCLEOTIDE]" << endl << "F: " << m_fwd << endl << "R: " << m_rev << endl; 
         
-        if (m_rev < m_fwd){
-            cout << "[add_nucleotide] yielding reverse" << endl;
-            return m_rev;}
-        else {
-            cout << "[add_nucleotide] yielding forward" << endl;
-            return m_fwd; }
+        if (m_rev < m_fwd)
+            return m_rev;
+        else 
+            return m_fwd; 
+    }
+
+    inline Skmer<kuint>& add_empty_nucleotide()
+    {
+        // empty nucleotide
+        const kuint nucl = 0b11U;
+        // --- forward prefix ---
+        // Shift prefix to the right
+        m_fwd_prefix_buff >>= 4;
+        // Get nucleotide that move from suffix to prefix
+        const auto fwd_central_nucl {m_fwd_suffix_buff >> (m_suff_size * 4 - 2)};
+        // Include the nucleotide in the prefix
+        m_fwd_prefix_buff |= fwd_central_nucl << ((m_pref_size-1) * 4);
+
+        // --- reverse suffix ---
+        // Shift the suffix to the right
+        m_rev_suffix_buff >>= 4;
+        // Get the nucleotide to transfer from the prefix to suffix
+        const auto rev_central_nucl {m_rev_prefix_buff >> ((m_pref_size - 1) * 4)};
+        // Include the transfered nucleotide
+        m_rev_suffix_buff |= rev_central_nucl << (m_suff_size * 4 - 2);
+
+        // --- forward suffix ---
+        // Shift the suffix
+        m_fwd_suffix_buff <<= 4;
+        // Add the new nucleotide
+        m_fwd_suffix_buff |= nucl << 2;
+        // Remove the transfered nucleotide
+        m_fwd_suffix_buff &= m_mask;
+
+        // --- reverse prefix ---
+        // Shift the prefix
+        m_rev_prefix_buff <<= 4;
+        // Add the new empty nucleotide
+        m_rev_prefix_buff |= nucl;
+        // Remove the transfered nucleotide
+        m_rev_prefix_buff &= m_mask;
+
+        // --- Merge the interleaved halves ---
+        m_fwd = m_fwd_prefix_buff | m_fwd_suffix_buff;
+        m_rev = m_rev_prefix_buff | m_rev_suffix_buff;
+
+        cout << "[ADD EMPTY NUCLEOTIDE]" << endl << "F: " << m_fwd << endl << "R: " << m_rev << endl; 
+        
+        if (m_rev < m_fwd)
+            return m_rev;
+        else 
+            return m_fwd; 
     }
 
     kuint minimizer() const
