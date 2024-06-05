@@ -501,7 +501,7 @@ public:
         return std::min(
             static_cast<kuint>(m_fwd.m_pair >> (4*(k-m))),
             static_cast<kuint>(m_rev.m_pair >> (4*(k-m)))
-        );osition 1 is < previous at position 2
+        );
     }
 
     kuint minimizer(const Skmer<kuint>& skmer) const
