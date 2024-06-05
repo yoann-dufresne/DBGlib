@@ -354,8 +354,15 @@ public:
             cout << "# kmers assigned to previous skmer: " << nb_kmers_in_prev << " ; pos_diff: " << pos_diff << " ; sum: " << nb_kmers_in_prev + pos_diff << endl;
             cout << "(k-m):" << (k-m) << " ; k - m - nb_kmers_in_prev - pos_diff:" << (k - m - nb_kmers_in_prev - pos_diff) << endl;
 
+
+            // If the suffix size is the number of nucleotides in the second kuint -> the suffix size
+            // contains part of the minimizer.
+            //prev_skmer.m_suff_size = ((2*k-m) / 2) - (k - m - pos_diff - nb_kmers_in_prev);
+            //current_skmer.m_pref_size = ((2*k-m+1) / 2) - nb_kmers_in_prev;
             prev_skmer.m_suff_size = nb_kmers_in_prev + pos_diff; // RECENT: ADDED pos_diff to the suffix size.
-            current_skmer.m_pref_size = k - m - nb_kmers_in_prev - 1; // RECENT: SUBTRACTED 1 to the prefix size.
+            current_skmer.m_pref_size = k - m - (nb_kmers_in_prev + 1); // RECENT: SUBTRACTED 1 to the prefix size.
+            // TO ASK: WHAT IS A PREFIX AND A SUFFIX? IF PREFIX = (K-M) - SOMETHING IT IS NOT THE SAME DEFINITION OF PREFIX 
+            // FOR THE MANIPULATOR
 
             // If end of the sequence
             const int64_t remaining_prev {m_remaining_nucleotides + static_cast<int64_t>(pos_diff)};
