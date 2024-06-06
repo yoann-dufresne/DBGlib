@@ -14,20 +14,21 @@
 namespace km
 {
 
-template <typename kuint>
-void sort_kmers(const SkmerManipulator<kuint>& m_manip, const std::vector<Skmer<kuint>>& m_skmer_list){
+template <typename kuint, std::size_t N>
+const std::vector<uint64_t> sort_kmers(const SkmerManipulator<kuint>& m_manip, const Skmer<kuint>(&m_skmer_list)[N]){
     // storing a list of skmer_ids.
-    std::vector<uint64_t> skmer_ids(m_skmer_list.size());
-    std::iota (std::begin(skmer_ids), std::end(skmer_ids), 0); // Fill with 0, 1, ..., m_skmer_list.size() - 1
+    std::vector<uint64_t> skmer_ids(N);
+    std::iota (skmer_ids.begin(), skmer_ids.end(), 0); // Fill with 0, 1, ..., m_skmer_list.size() - 1
     
     std::vector<std::vector<uint64_t>> sorted_lists((2 * m_manip.k) - m_manip.m);
-    for(uint64_t position = 0; position < ((2 * m_manip.k) - m_manip.m); position++){
-        sorted_lists[position] = get_sorted_list(m_manip,m_skmer_list, position, skmer_ids);
-    }
+    //for(uint64_t position = 0; position < ((2 * m_manip.k) - m_manip.m); position++){
+    uint64_t position = 3;
+    sorted_lists[position] = get_sorted_list(m_manip,m_skmer_list, position, skmer_ids);
+    return sorted_lists[position];
 }
 
-template <typename kuint>
-const std::vector<Skmer<kuint>> get_sorted_list(const SkmerManipulator<kuint>& m_manip, const std::vector<Skmer<kuint>>& m_skmer_list
+template <typename kuint, std::size_t N>
+const std::vector<uint64_t> get_sorted_list(const SkmerManipulator<kuint>& m_manip, const Skmer<kuint>(&m_skmer_list)[N]
 , const uint64_t position, const std::vector<uint64_t>& skmer_ids){
     // Accessing and comparing kmers in skmers (less than) is done by kmer_lt_kmer of skmermanipulator
     // 1st pass over the column: check which skmers are ok to be processed
@@ -39,35 +40,39 @@ const std::vector<Skmer<kuint>> get_sorted_list(const SkmerManipulator<kuint>& m
         }
     }
     std::cout << "VALID SKMER LIST:" << std::endl;
-    for (auto i: skmer_ids)
+    for (auto i: valid_skmer_ids)
         std::cout << i << ' ';
     std::cout << std::endl;
 
     // 2nd pass over the column: return ordered list 
     // For every "column" i.e. possible kmer in the skmer size
     // For every skmer that has a kmer in that column
-    std::sort(skmer_ids.begin(), skmer_ids.end(), compare_kmer_skmer_pos(position, m_manip, m_skmer_list));
+    //std::sort(valid_skmer_ids.begin(), valid_skmer_ids.end(), compare_kmer_skmer_pos<kuint, N>(position, m_manip, m_skmer_list));
     
+    std::sort(valid_skmer_ids.begin(), valid_skmer_ids.end(),
+              compare_kmer_skmer_pos<kuint, N>(position, m_manip, m_skmer_list));
+
     std::cout << "SORTED SKMER LIST:" << std::endl;
-    for (auto i: skmer_ids)
+    for (auto i: valid_skmer_ids)
         std::cout << i << ' ';
     std::cout << std::endl;
+    
+    return valid_skmer_ids;
 }
 
-
-template <typename kuint>
+template <typename kuint, std::size_t N>
 class compare_kmer_skmer_pos {
+    uint64_t position;
     const SkmerManipulator<kuint>& manipulator;
-    const uint64_t position;
-    const std::vector<uint64_t>& m_skmer_list;
+    const Skmer<kuint> (&m_skmer_list)[N];
 
 public:
     // the comparison function takes as argument 2 integers, a position and the vector of skmers. 
     // It compares the two skmers in the selected position and returns which one is before the other.
-    compare_kmer_skmer_pos(const uint64_t p, const SkmerManipulator<kuint>& skmer_manipulator, const std::vector<uint64_t>& skmer_list) 
+    compare_kmer_skmer_pos(uint64_t p, const SkmerManipulator<kuint>& skmer_manipulator, const Skmer<kuint>(&skmer_list)[N]) 
     : position(p), manipulator(skmer_manipulator), m_skmer_list(skmer_list)  {}
 
-    bool operator()(const uint64_t skmer_id_1,const uint64_t skmer_id_2) {
+    bool operator()(const uint64_t skmer_id_1,const uint64_t skmer_id_2) const {
         return manipulator.kmer_lt_kmer(m_skmer_list[skmer_id_1], position, m_skmer_list[skmer_id_2], position);
     }
 };
