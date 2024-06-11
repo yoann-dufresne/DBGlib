@@ -35,9 +35,9 @@ public:
     {}
     Skmer(const pair& value, uint16_t prefix_size, uint16_t suffix_size) : m_pair(value), m_pref_size(prefix_size), m_suff_size(suffix_size)
     {}
-    Skmer(Skmer& other) : m_pair(other.m_pair), m_pref_size(other.m_pref_size), m_suff_size(other.m_suff_size)
+    Skmer(const Skmer& other) : m_pair(other.m_pair), m_pref_size(other.m_pref_size), m_suff_size(other.m_suff_size)
     {}
-    Skmer(Skmer&& other) : m_pair(other.m_pair), m_pref_size(other.m_pref_size), m_suff_size(other.m_suff_size)
+    Skmer(const Skmer&& other) : m_pair(other.m_pair), m_pref_size(other.m_pref_size), m_suff_size(other.m_suff_size)
     {}
 
     Skmer<kuint>& operator= (const Skmer<kuint>& other)
@@ -496,20 +496,20 @@ std::ostream& operator<<(std::ostream& os, SkmerManipulator<T>& manip)
 template <typename T>
 bool has_valid_skmer(const SkmerManipulator<T>& manip, const uint64_t position,  const Skmer<T>& sk1){
     // case position < start of skmer prefix
-    std::cout << "Position: " << position << " | sk1.m_pref_size: " << sk1.m_pref_size << " | sk1.suffix_size: " << sk1.m_suff_size << std::endl;
-    std::cout << "k: " << manip.k << " | m: " << manip.m << " | max_prefix: " << manip.m_pref_size << " | max_suffix: " << manip.m_suff_size << std::endl;
+    // std::cout << "Position: " << position << " | sk1.m_pref_size: " << sk1.m_pref_size << " | sk1.suffix_size: " << sk1.m_suff_size << std::endl;
+    // std::cout << "k: " << manip.k << " | m: " << manip.m << " | max_prefix: " << manip.m_pref_size << " | max_suffix: " << manip.m_suff_size << std::endl;
     if (position < (manip.m_pref_size - sk1.m_pref_size)){
-        std::cout << "max_pref_size-pref_size: " << (manip.m_pref_size - sk1.m_pref_size) << std::endl;
-        std::cout << "smaller than prefix" << std::endl;
+        // std::cout << "max_pref_size-pref_size: " << (manip.m_pref_size - sk1.m_pref_size) << std::endl;
+        // std::cout << "smaller than prefix" << std::endl;
         return false;
     }
     // case position > end of skmer suffix
     else if (position >= ((2 * manip.k) - manip.m - (manip.m_suff_size - sk1.m_suff_size))){
-        std::cout << "Max_length-suff_size: " << ((2 * manip.k) - manip.m - sk1.m_suff_size) << std::endl;
-        std::cout << "larger than suffix" << std::endl;
+        // std::cout << "Max_length-suff_size: " << ((2 * manip.k) - manip.m - sk1.m_suff_size) << std::endl;
+        // std::cout << "larger than suffix" << std::endl;
     }
     // in any other case the position is between the skmer positions 
-    std::cout << "Present" << std::endl;
+    // std::cout << "Present" << std::endl;
     return true;
 }
 
