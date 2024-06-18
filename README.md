@@ -9,7 +9,14 @@
 
 ## Tests
 
+* Run all tests
 ```bash
 	mkdir -p build && cd build
 	cmake -DCMAKE_BUILD_TYPE=DEBUG .. && make && ./tests/dbglib-tests
+```
+
+* Run a subset of tests
+```bash
+	mkdir -p build && cd build
+	cmake -DCMAKE_BUILD_TYPE=DEBUG .. && make && ./tests/dbglib-tests --gtest_filter="regexp test names"
 ```
