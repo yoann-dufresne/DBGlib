@@ -193,8 +193,6 @@ public:
                 // -- Save the skmer to eventually yield
                 m_rator.m_yielded_skmer = m_skmer_buffer_array[(m_ptr_current + 1) % m_buffer_size];
                 std::cout << "current position: " << (m_ptr_current+1) << " (" << ((m_ptr_current + 1) % m_buffer_size) << ")" << std::endl;
-                this->debug_print_buffer();
-                cout << endl;
                 
                 // -- On out of context minimizer
                 if (m_ptr_current - m_ptr_min >= k - m)
@@ -258,6 +256,8 @@ public:
                     return *this;
                 }
 
+                this->debug_print_buffer();
+                cout << endl;
             } // End of the while over the sequence
 
             Skmer<kuint>& last_skmer = m_skmer_buffer_array[m_ptr_min % m_buffer_size];
