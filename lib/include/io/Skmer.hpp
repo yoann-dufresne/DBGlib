@@ -252,7 +252,7 @@ template<typename kuint>
 class SkmerPrettyPrinter
 {
 public:
-    Skmer<kuint>* m_skmer;
+    Skmer<kuint> m_skmer;
     uint64_t k;
     uint64_t m;
     uint64_t sk_size;
@@ -263,9 +263,9 @@ public:
                     , sk_size(2*k-m), m_suff_size(sk_size / 2), m_pref_size((sk_size+1) / 2)
     {};
 
-    SkmerPrettyPrinter& operator<< (const Skmer<kuint>* skmer)
+    SkmerPrettyPrinter& operator<< (Skmer<kuint> const skmer)
     {
-        m_skmer = const_cast<Skmer<kuint>*>(skmer);
+        m_skmer = skmer;
         return *this;
     }
 
@@ -280,15 +280,15 @@ std::ostream& operator<<(std::ostream& os, const SkmerPrettyPrinter<kuint> pp)
     os << "[skmer not interleaved: ";
 
     // Forward prefix
-    for (uint64_t pref_idx{k-m-pp.m_skmer->m_pref_size} ; pref_idx<pp.m_pref_size ; pref_idx++)
+    for (uint64_t pref_idx{k-m-pp.m_skmer.m_pref_size} ; pref_idx<pp.m_pref_size ; pref_idx++)
     {
-        os << nucleotides[((*pp.m_skmer).m_pair >> (4 * pref_idx)) & 0b11UL];
+        os << nucleotides[((pp.m_skmer).m_pair >> (4 * pref_idx)) & 0b11UL];
     }
     os << " ";
     // Forward suffix
-    for (uint64_t suf_idx{pp.m_suff_size} ; suf_idx>(k-m-pp.m_skmer->m_suff_size) ; suf_idx--)
+    for (uint64_t suf_idx{pp.m_suff_size} ; suf_idx>(k-m-pp.m_skmer.m_suff_size) ; suf_idx--)
     {
-        os << nucleotides[((*pp.m_skmer).m_pair >> (4 * suf_idx - 2)) & 0b11UL];
+        os << nucleotides[((pp.m_skmer).m_pair >> (4 * suf_idx - 2)) & 0b11UL];
     }
 
     os << "]";
@@ -440,8 +440,6 @@ public:
         m_fwd = m_fwd_prefix_buff | m_fwd_suffix_buff;
         m_rev = m_rev_prefix_buff | m_rev_suffix_buff;
 
-        cout << "[ADD NUCLEOTIDE]" << endl << "F: " << m_fwd << endl << "R: " << m_rev << endl; 
-        
         if (m_rev < m_fwd)
             return m_rev;
         else 
@@ -488,8 +486,6 @@ public:
         m_fwd = m_fwd_prefix_buff | m_fwd_suffix_buff;
         m_rev = m_rev_prefix_buff | m_rev_suffix_buff;
 
-        cout << "[ADD EMPTY NUCLEOTIDE]" << endl << "F: " << m_fwd << endl << "R: " << m_rev << endl; 
-        
         if (m_rev < m_fwd)
             return m_rev;
         else 
@@ -537,19 +533,12 @@ public:
         const uint64_t second_mask_size {(k-m)/2 > second_kmer_pos ? second_kmer_pos * 2 - 1 : 2 * (k - m - second_kmer_pos) };
         const uint64_t mask_size {std::max(first_mask_size, second_mask_size) * 2};
 
-        cout << "[KMER < KMER]" << endl;
-        cout << "1st mask size = " << first_mask_size << " 2nd mask " << second_mask_size << " -> mask size in bits: " << mask_size << endl;
-
         // 2 - Compare masked kmers
         // check if first skmer shifted right of mask is < second skmer shifted right of mask 
-        cout << "c:   " << first_skmer.m_pair << endl << "p:   " << second_skmer.m_pair << endl;
-
         const auto first_kmer {first_skmer.m_pair >> mask_size};
         const auto second_kmer {second_skmer.m_pair >> mask_size};
-        cout << "c_m: " << first_kmer << endl << "p_m: " << second_kmer << endl;
-
+        
         if (first_kmer != second_kmer){
-            cout << "current < previous: (1=true/0=false) " << (first_kmer < second_kmer) << endl;
             return first_kmer < second_kmer;}
         
         // 4 - If equals => true if second skmer is the first one to miss a nucleotide (left based)

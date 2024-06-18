@@ -123,7 +123,7 @@ TEST(Skmerator, outofcontext_minimizer)
     uint64_t nb_skmer {0};
     for ([[maybe_unused]]km::Skmer<kuint> skmer : skmerator)
     {
-        pp << &skmer;
+        pp << skmer;
         cout << pp << endl;
 
         //                            Less significant             Most significant
