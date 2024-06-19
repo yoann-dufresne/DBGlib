@@ -73,6 +73,7 @@ public:
         // Buffered unmasked skmers
         uint64_t m_buffer_size;
         std::vector<Skmer<kuint> > m_skmer_buffer_array;
+        std::vector<bool> m_skmer_orientation;
         uint64_t m_ptr_current;
         uint64_t m_ptr_min;
         uint64_t m_ptr_last_round;
@@ -92,6 +93,7 @@ public:
             , m_manip(skmerator.m_manip), m_current_minimizer(~static_cast<kuint>(0))
             , m_buffer_size(2 * skmerator.m_manip.k - skmerator.m_manip.m)
             , m_skmer_buffer_array(std::vector<Skmer<kuint> >(m_buffer_size))
+            , m_skmer_orientation(std::vector<bool>(m_buffer_size))
             , m_ptr_current(skmerator.m_manip.k - skmerator.m_manip.m)
             , m_ptr_min(0) // minimizer_position
             , m_ptr_last_round(0)
@@ -198,38 +200,55 @@ public:
                 if (m_ptr_current - m_ptr_min >= k - m)
                 {
                     // Set the suffix size of the ooc skmer
-                    m_skmer_buffer_array[m_ptr_min % m_buffer_size].m_suff_size = k - m;
-                    // TODO: recompute the previous minimizer
+                    Skmer<kuint>& ooc_skmer {m_skmer_buffer_array[m_ptr_min % m_buffer_size]};
+                    auto const ooc_orientation {m_skmer_orientation[m_ptr_min % m_buffer_size]};
+                    update_skmer_right_size(ooc_skmer, ooc_orientation, k - m);
+
+                    // Update the left part of all the skmers in the window
+                    for (uint64_t left_size{0} ; left_size <= k-m ; left_size++)
+                    {
+                        Skmer<kuint>& prev_skmer {m_skmer_buffer_array[(m_ptr_min + left_size + 1) % m_buffer_size]};
+                        auto const prev_orientation {m_skmer_orientation[(m_ptr_min + left_size + 1) % m_buffer_size]};
+                        update_skmer_left_size(prev_skmer, prev_orientation, left_size);
+                    }
+                    cout << "m_ptr_min " << m_ptr_min << endl;
+                    // recompute the minimizer
                     this->recompute_minimizer(m_ptr_min + 1, m_ptr_current);
                 }
                 
                 // Get the next candidate skmer
                 Skmer<kuint>& candidate {compute_new_candidate_skmer()};
+                auto const candidate_orient {m_skmer_orientation[m_ptr_current % m_buffer_size]};
                 
                 // Get the minimizer
                 const kuint candidate_minimizer {m_manip.minimizer(candidate)};
 
                 // -- A new minimizer has been discovered
                 if (candidate_minimizer < m_current_minimizer) {
-                    // 1 - Prefix the new skmer
-                    candidate.m_pref_size = k - m;
+                    // 1 - Left of the new skmer
+                    update_skmer_left_size(candidate, candidate_orient, k - m);
 
                     // 2 - define the suffix of the previous skmer that was including the minimizer
                     Skmer<kuint>& mini_skmer {m_skmer_buffer_array[m_ptr_min % m_buffer_size]};
-                    mini_skmer.m_suff_size = m_ptr_current - m_ptr_min - 1;
+                    auto const mini_orient {m_skmer_orientation[m_ptr_min % m_buffer_size]};
+                    update_skmer_right_size(mini_skmer, mini_orient, m_ptr_current - m_ptr_min - 1);
 
                     // 3 - Limit the suffixes of the previous skmers
                     for (uint64_t idx{0} ; idx < (k - m) ; idx++)
                     {
-                        Skmer<kuint>& predecessor {m_skmer_buffer_array[(m_ptr_current - (k - m) + idx) % m_buffer_size]};
+                        auto const pred_buff_idx {(m_ptr_current - (k - m) + idx) % m_buffer_size};
+                        Skmer<kuint>& predecessor {m_skmer_buffer_array[pred_buff_idx]};
+                        auto const pred_orient {m_skmer_orientation[m_ptr_min % m_buffer_size]};
                         // Mask the nucleotides from the predecessor that are part of this skmer.
-                        predecessor.m_suff_size = std::min( static_cast<uint16_t>(predecessor.m_suff_size)
-                                                          , static_cast<uint16_t>(k - m - idx - 1));
-
+                        auto const right_size {get_skmer_right_size(predecessor, pred_orient)};
+                        update_skmer_right_size(predecessor, pred_orient, std::min(right_size
+                                                          , static_cast<uint16_t>(k - m - idx - 1)));
+                        
                         // If end of the sequence
-                        const int64_t remaining_prev {m_remaining_nucleotides + static_cast<int64_t>(k - m - idx)};
+                        int64_t const remaining_prev {m_remaining_nucleotides + static_cast<int64_t>(k - m - idx)};
                         if (remaining_prev < 0)
-                            predecessor.m_suff_size = std::min(predecessor.m_suff_size, static_cast<uint16_t>(k - m + remaining_prev));
+                            update_skmer_right_size(predecessor, pred_orient, std::min(right_size
+                                                          , static_cast<uint16_t>(k - m + remaining_prev)));
                     }
                     
                     // 4 - save the new current minimal skmer and minimizer
@@ -261,12 +280,14 @@ public:
             } // End of the while over the sequence
 
             Skmer<kuint>& last_skmer = m_skmer_buffer_array[m_ptr_min % m_buffer_size];
-            last_skmer.m_suff_size = m_ptr_current - m_ptr_min;
+            auto last_orientation {m_skmer_orientation[m_ptr_min % m_buffer_size]};
+            update_skmer_right_size(last_skmer, last_orientation, m_ptr_current - m_ptr_min);
             
             // Recursive call to return the already computed skmer array
             m_ptr_last_round = m_ptr_current;
             return this->operator++();
         }
+
 
         Skmer<kuint>& compute_new_candidate_skmer()
         {
@@ -278,65 +299,71 @@ public:
                     m_remaining_nucleotides >= 0 ?(static_cast<kuint>((m_seq[m_ptr_current] >> 1) & 0b11U)) : static_cast<kuint>(0b11U)};
             
             m_skmer_buffer_array[ m_ptr_current % m_buffer_size ] = (m_remaining_nucleotides >= 0) ? m_manip.add_nucleotide(nucl) : m_manip.add_empty_nucleotide();
+            m_skmer_orientation[ m_ptr_current % m_buffer_size ] = m_manip.is_forward();
             //m_manip.add_nucleotide(nucl);
             return m_skmer_buffer_array[ m_ptr_current % m_buffer_size ];
         }
 
         void update_on_equal_mini(uint64_t ptr_equivalent)
         {
+            // cout << "update_on_equal_mini" << endl;
             const uint64_t k{m_manip.k};
             const uint64_t m{m_manip.m};
 
             const uint64_t pos_diff {ptr_equivalent - m_ptr_min};
             Skmer<kuint>& current_skmer {m_skmer_buffer_array[ptr_equivalent % m_buffer_size]};
+            auto const curr_orient {m_skmer_orientation[ptr_equivalent % m_buffer_size]};
             Skmer<kuint>& prev_skmer {m_skmer_buffer_array[m_ptr_min % m_buffer_size]};
+            auto const prev_orient {m_skmer_orientation[m_ptr_min % m_buffer_size]};
+
+            // cout << "prev " << prev_orientation << " " << prev_skmer.m_pref_size << " " << prev_skmer.m_suff_size << endl;
+            // cout << "current " << curr_orientation << " " << current_skmer.m_pref_size << " " << current_skmer.m_suff_size << endl;
 
             // km::SkmerPrettyPrinter<kuint> pp {k, m};
 
-            // 0 - Due to the way that we encode skmers, the no suffix kmer in the current skmer will always be with the previous skmer.
-            uint64_t first_kmer_in_new_skmer {1};
+            // 0 - Wrong: Due to the way that we encode skmers, the no suffix kmer in the current skmer will always be with the previous skmer.
+            // Updated to accomodate with revcompl
+            uint64_t first_kmer_in_new_skmer {0};
 
             // 1 - Scan all the kmer shared between the 2 skmers to decide where is the limit between the 2 skmers
             for ( ; first_kmer_in_new_skmer < k - m - pos_diff ; first_kmer_in_new_skmer++)
-            {
-                const uint64_t prev_skmer_km_pos {first_kmer_in_new_skmer + pos_diff};
+            {  
 
-                // 2 - The shared kmer is part of the new skmer
-                const uint64_t f_old_pref {current_skmer.m_pref_size};
-                const uint64_t f_old_suff {current_skmer.m_suff_size};
-                current_skmer.m_pref_size = (k - m);
-                current_skmer.m_suff_size = (k - m);
-                current_skmer.m_pref_size = f_old_pref;
-                current_skmer.m_suff_size = f_old_suff;   
+                uint64_t const prev_skmer_km_pos {prev_orient == forward_c
+                                                        ? first_kmer_in_new_skmer - pos_diff
+                                                        : k - m - first_kmer_in_new_skmer - pos_diff
+                                                 };
+                uint64_t const curr_skmer_km_pos {curr_orient == forward_c
+                                                        ? first_kmer_in_new_skmer
+                                                        : k - m - first_kmer_in_new_skmer
+                                                 };
 
-                const uint64_t s_old_pref {prev_skmer.m_pref_size};
-                const uint64_t s_old_suff {prev_skmer.m_suff_size};
-                prev_skmer.m_pref_size = (k - m);
-                prev_skmer.m_suff_size = (k - m);
-                prev_skmer.m_pref_size = s_old_pref;
-                prev_skmer.m_suff_size = s_old_suff;     
-                if (m_manip.kmer_lt_kmer(current_skmer, first_kmer_in_new_skmer, prev_skmer, prev_skmer_km_pos))
+                if (m_manip.kmer_lt_kmer(current_skmer, curr_skmer_km_pos, prev_skmer, prev_skmer_km_pos))
                     break;
             }
 
 
             const uint64_t nb_kmers_in_prev {first_kmer_in_new_skmer};
 
-            // 3 - Update suffix of the previous skmer and prefix of the new skmer
+            // 3 - Update suffix (prefix if revcomp) of the previous skmer and prefix of the new skmer
             
             // If the suffix size is the number of nucleotides in the second kuint -> the suffix size
             // contains part of the minimizer.
-            //prev_skmer.m_suff_size = ((2*k-m) / 2) - (k - m - pos_diff - nb_kmers_in_prev);
-            //current_skmer.m_pref_size = ((2*k-m+1) / 2) - nb_kmers_in_prev;
-            prev_skmer.m_suff_size = nb_kmers_in_prev + pos_diff; // RECENT: ADDED pos_diff to the suffix size.
-            current_skmer.m_pref_size = k - m - (nb_kmers_in_prev + 1); // RECENT: SUBTRACTED 1 to the prefix size.
+            update_skmer_right_size(prev_skmer, prev_orient, nb_kmers_in_prev + pos_diff);
+            update_skmer_left_size(current_skmer, curr_orient, k - m - (nb_kmers_in_prev + 1));
             
             // If end of the sequence
+            //          TODO: Maybe a bug here     vvvvv
             const int64_t remaining_prev {m_remaining_nucleotides + static_cast<int64_t>(pos_diff)};
             if (remaining_prev < 0)
-                prev_skmer.m_suff_size = std::min(prev_skmer.m_suff_size, static_cast<uint16_t>(k - m +remaining_prev));
+            {
+                uint16_t const right_size {get_skmer_right_size(prev_skmer, prev_orient)};
+                update_skmer_right_size(prev_skmer, prev_orient, std::min(right_size
+                                                                  , static_cast<uint16_t>(k - m +remaining_prev)));
+            }
 
             m_ptr_min = ptr_equivalent;
+            // cout << "/update_on_equal_mini" << endl << endl;
         }
 
         /** Compute the dominant minimizer in the slice of the buffer. If multiple identical minimizers are present
@@ -346,6 +373,7 @@ public:
          **/
         void recompute_minimizer(uint64_t buff_start, uint64_t buff_stop)
         {
+            cout << "recompute_minimizer" << endl;
             // 0 - Select first candidate
             Skmer<kuint>& first = m_skmer_buffer_array[buff_start % m_buffer_size];
             m_current_minimizer = m_manip.minimizer(first);
@@ -360,8 +388,11 @@ public:
             // 1 - Compute the minimizer in the window
             for (uint64_t idx{buff_start+1} ; idx<=buff_stop ; idx++)
             {
+                cout << idx << ": ";
                 Skmer<kuint>& candidate = m_skmer_buffer_array[idx % m_buffer_size];
                 kuint candidate_minimizer = m_manip.minimizer(candidate);
+                cout << "candidate: " << candidate_minimizer << endl;
+                cout << candidate << endl;
 
                 if (candidate_minimizer < m_current_minimizer)
                 {
@@ -376,10 +407,14 @@ public:
             }
 
             // 2 - For each skmer with the minimizer compute pref/suff sizes
-            m_skmer_buffer_array[m_ptr_min % m_buffer_size].m_pref_size = m_ptr_min - buff_start;
+            Skmer<kuint> & mini_skmer {m_skmer_buffer_array[m_ptr_min % m_buffer_size]};
+            auto const mini_orient {m_skmer_orientation[m_ptr_min % m_buffer_size]};
+            update_skmer_left_size(mini_skmer, mini_orient, m_ptr_min - buff_start);
+
             // Multiple identical minimizers
             if (nb_identical > 1)
             {
+                cout << "multiple" << endl;
                 // Iterate over the buffer to find identical minimizers
                 for (uint64_t idx{m_ptr_min+1} ; idx<=buff_stop ; idx++)
                 {
@@ -388,6 +423,8 @@ public:
                         this->update_on_equal_mini(idx);
                 }
             }
+            cout << "current mini: " << m_ptr_min << endl;
+            cout << "/recompute_minimizer" << endl << endl;
         }
 
 
@@ -411,6 +448,38 @@ public:
                 pp << m_skmer_buffer_array[i];
                 std::cout << i << ":\t" << m_skmer_buffer_array[i] << "\t" << pp << std::endl;
             }
+        }
+
+        void update_skmer_right_size(Skmer<kuint>& skmer, orientation_t orientation, uint64_t size)
+        {
+            if (orientation == forward_c)
+                skmer.m_suff_size = size;
+            else
+                skmer.m_pref_size = size;
+        }
+
+        void update_skmer_left_size(Skmer<kuint>& skmer, orientation_t orientation, uint64_t size)
+        {
+            if (orientation == forward_c)
+                skmer.m_pref_size = size;
+            else
+                skmer.m_suff_size = size;
+        }
+
+        uint16_t get_skmer_left_size(Skmer<kuint> const & skmer, orientation_t orientation) const
+        {
+            if (orientation == forward_c)
+                return skmer.m_pref_size;
+            else
+                return skmer.m_suff_size;
+        }
+
+        uint16_t get_skmer_right_size(Skmer<kuint> const & skmer, orientation_t orientation) const
+        {
+            if (orientation == forward_c)
+                return skmer.m_suff_size;
+            else
+                return skmer.m_pref_size;
         }
 
     };

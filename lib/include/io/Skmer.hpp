@@ -296,7 +296,9 @@ std::ostream& operator<<(std::ostream& os, const SkmerPrettyPrinter<kuint> pp)
     return os;
 }
 
-
+using orientation_t = bool;
+const bool forward_c {true};
+const bool reverse_c {false};
 
 template<typename kuint>
 class SkmerManipulator
@@ -314,6 +316,7 @@ public:
 protected:
     uint64_t m_suff_size;
     uint64_t m_pref_size;
+    bool m_current_orientation;
 
     Skmer<kuint>::pair m_fwd_suffix_buff;
     Skmer<kuint>::pair m_fwd_prefix_buff;
@@ -333,6 +336,7 @@ protected:
 public:
     SkmerManipulator(const uint64_t k, const uint64_t m) 
         : k(k), m(m), sk_size(2*k-m), m_suff_size(sk_size / 2), m_pref_size((sk_size+1) / 2)
+        , m_current_orientation(forward_c)
         , max_pair_value(static_cast<kuint>(~static_cast<kuint>(0)), static_cast<kuint>(~static_cast<kuint>(0)))
         , m_mask( max_pair_value >> (2 * sizeof(kuint) * 8 - 2 * sk_size) )
     {
@@ -441,9 +445,15 @@ public:
         m_rev = m_rev_prefix_buff | m_rev_suffix_buff;
 
         if (m_rev < m_fwd)
+        {
+            m_current_orientation = reverse_c;
             return m_rev;
-        else 
-            return m_fwd; 
+        }
+        else
+        {
+            m_current_orientation = forward_c;
+            return m_fwd;
+        }
     }
 
     inline Skmer<kuint>& add_empty_nucleotide()
@@ -487,9 +497,20 @@ public:
         m_rev = m_rev_prefix_buff | m_rev_suffix_buff;
 
         if (m_rev < m_fwd)
+        {
+            m_current_orientation = reverse_c;
             return m_rev;
+        }
         else 
-            return m_fwd; 
+        {
+            m_current_orientation = forward_c;
+            return m_fwd;
+        }
+    }
+
+    bool is_forward() const
+    {
+        return m_current_orientation;
     }
 
     kuint minimizer() const
