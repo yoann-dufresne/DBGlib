@@ -261,11 +261,11 @@ public:
                 {
                     this->update_on_equal_mini(m_ptr_current);
                 }
-                // Correction of the prefix size for the beginning of the sequence
+                // Correction of the left size for the beginning of the sequence
                 if (m_ptr_current < 2 * k - m - 1)
                 {
-                    uint16_t max_prefix {static_cast<uint16_t>(m_ptr_current - (k - 1))};
-                    candidate.m_pref_size = std::min(candidate.m_pref_size, max_prefix);
+                    uint16_t max_size {static_cast<uint16_t>(m_ptr_current - (k - 1))};
+                    update_skmer_left_size(candidate, candidate_orient, std::min(candidate.m_pref_size, max_size));
                 }
 
                 // -- Yield if needed
@@ -446,7 +446,7 @@ public:
             for (uint64_t i{0} ; i<m_buffer_size ; i++)
             {
                 pp << m_skmer_buffer_array[i];
-                std::cout << i << ":\t" << m_skmer_buffer_array[i] << "\t" << pp << std::endl;
+                std::cout << i << ":\t" << m_skmer_buffer_array[i] << " orientation:" << m_skmer_orientation[i] << "\t" << pp << std::endl;
             }
         }
 
