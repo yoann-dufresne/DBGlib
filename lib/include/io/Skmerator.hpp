@@ -194,18 +194,24 @@ public:
             {
                 // -- Save the skmer to eventually yield
                 m_rator.m_yielded_skmer = m_skmer_buffer_array[(m_ptr_current + 1) % m_buffer_size];
-                // std::cout << "current position: " << (m_ptr_current+1) << " (" << ((m_ptr_current + 1) % m_buffer_size) << ")" << std::endl;
+                std::cout << "current position: " << (m_ptr_current+1) << " (" << ((m_ptr_current + 1) % m_buffer_size) << ")" << std::endl;
 
                 
                 // -- On out of context minimizer
                 if (m_ptr_current - m_ptr_min >= k - m)
                 {
+                    cout << "out of context" << endl;
                     this->solve_out_of_context();
+                    cout << endl;
                 }
                 
                 // Get the next candidate skmer
                 Skmer<kuint>& candidate {compute_new_candidate_skmer()};
                 auto const candidate_orient {m_skmer_orientation[m_ptr_current % m_buffer_size]};
+
+                km::SkmerPrettyPrinter<kuint> pp {k, m};
+                pp << candidate;
+                cout << "candidate " << candidate << " " << pp << endl;
                 
                 // Get the minimizer
                 const kuint candidate_minimizer {m_manip.minimizer(candidate)};
@@ -226,6 +232,7 @@ public:
                 {
                     auto const dist_to_min {m_ptr_current - m_ptr_min};
                     update_skmer_left_size(candidate, candidate_orient, dist_to_min-1);
+                    cout << "not a minimizer d:" << dist_to_min << endl;
                 }
 
                 // -- Yield if needed
@@ -235,8 +242,8 @@ public:
                     return *this;
                 }
 
-                // this->debug_print_buffer();
-                // cout << endl;
+                this->debug_print_buffer();
+                cout << endl;
             } // End of the while over the sequence
 
             Skmer<kuint>& last_skmer = m_skmer_buffer_array[m_ptr_min % m_buffer_size];
@@ -258,13 +265,13 @@ public:
             auto const ooc_orientation {m_skmer_orientation[m_ptr_min % m_buffer_size]};
             update_skmer_right_size(ooc_skmer, ooc_orientation, k - m);
 
-            // Update the left part of all the skmers in the window
-            for (uint64_t left_size{0} ; left_size <= k-m ; left_size++)
-            {
-                Skmer<kuint>& prev_skmer {m_skmer_buffer_array[(m_ptr_min + left_size + 1) % m_buffer_size]};
-                auto const prev_orientation {m_skmer_orientation[(m_ptr_min + left_size + 1) % m_buffer_size]};
-                update_skmer_left_size(prev_skmer, prev_orientation, left_size);
-            }
+            // // Update the left part of all the skmers in the window
+            // for (uint64_t left_size{0} ; left_size <= k-m ; left_size++)
+            // {
+            //     Skmer<kuint>& prev_skmer {m_skmer_buffer_array[(m_ptr_min + left_size + 1) % m_buffer_size]};
+            //     auto const prev_orientation {m_skmer_orientation[(m_ptr_min + left_size + 1) % m_buffer_size]};
+            //     update_skmer_left_size(prev_skmer, prev_orientation, left_size);
+            // }
             // recompute the minimizer
             this->recompute_minimizer(m_ptr_min + 1, m_ptr_current);
         }
@@ -393,11 +400,11 @@ public:
             Skmer<kuint>& first = m_skmer_buffer_array[buff_start % m_buffer_size];
             m_current_minimizer = m_manip.minimizer(first);
             m_ptr_min = buff_start;
-            uint64_t nb_identical = 1;
+            uint64_t first_equal_mini {m_ptr_min};
+            uint64_t last_equal_mini {m_ptr_min};
 
             // const uint64_t k{m_manip.k};
             // const uint64_t m{m_manip.m};
-
             // km::SkmerPrettyPrinter<kuint> pp {k, m};
             
             // 1 - Compute the minimizer in the window
@@ -405,41 +412,51 @@ public:
             {
                 Skmer<kuint>& candidate = m_skmer_buffer_array[idx % m_buffer_size];
                 kuint candidate_minimizer = m_manip.minimizer(candidate);
-                // cout << idx << ": ";
-                // cout << "candidate: " << candidate_minimizer << endl;
-                // cout << candidate << endl;
 
                 if (candidate_minimizer < m_current_minimizer)
                 {
                     m_current_minimizer = candidate_minimizer;
                     m_ptr_min = idx;
-                    nb_identical = 1;
+                    first_equal_mini = idx;
+                    last_equal_mini = idx;
                 }
                 else if (candidate_minimizer == m_current_minimizer)
                 {
-                    nb_identical += 1;
+                    last_equal_mini = idx;
                 }
             }
 
-            // 2 - For each skmer with the minimizer compute pref/suff sizes
-            Skmer<kuint> & mini_skmer {m_skmer_buffer_array[m_ptr_min % m_buffer_size]};
-            auto const mini_orient {m_skmer_orientation[m_ptr_min % m_buffer_size]};
-            update_skmer_left_size(mini_skmer, mini_orient, m_ptr_min - buff_start);
-
-            // Multiple identical minimizers
-            if (nb_identical > 1)
+            for (uint64_t idx{buff_start} ; idx<=buff_stop ; idx++)
             {
-                // cout << "multiple" << endl;
-                // Iterate over the buffer to find identical minimizers
-                for (uint64_t idx{m_ptr_min+1} ; idx<=buff_stop ; idx++)
+                Skmer<kuint>& candidate = m_skmer_buffer_array[idx % m_buffer_size];
+                
+                // Before the last equivalent minimizer we can detroy the candidate skmers with larger minimizers
+                if (idx <= last_equal_mini)
                 {
-                    Skmer<kuint>& candidate {m_skmer_buffer_array[idx % m_buffer_size]};
-                    if (m_manip.minimizer(candidate) == m_current_minimizer)
-                        this->update_on_equal_mini(idx);
+                    kuint candidate_minimizer = m_manip.minimizer(candidate);
+
+                    // Destroy the skmer
+                    if (candidate_minimizer != m_current_minimizer)
+                        candidate.m_pref_size = candidate.m_suff_size = 0;
+
+                    // Update the skmer holding minimizer
+                    else
+                    {
+                        Skmer<kuint> & mini_skmer {m_skmer_buffer_array[m_ptr_min % m_buffer_size]};
+                        auto const mini_orient {m_skmer_orientation[m_ptr_min % m_buffer_size]};
+                        update_skmer_left_size(mini_skmer, mini_orient, m_ptr_min - buff_start);
+                        if (idx != first_equal_mini)
+                            this->update_on_equal_mini(idx);
+                    }
+                }
+                // We now only have to update the left part of remaining skmers
+                else
+                {
+                    auto const orient {m_skmer_orientation[idx % m_buffer_size]};
+                    update_skmer_left_size(candidate, orient, idx - last_equal_mini - 1);
                 }
             }
-            // cout << "current mini: " << m_ptr_min << endl;
-            // cout << "/recompute_minimizer" << endl << endl;
+
         }
 
 

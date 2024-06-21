@@ -144,8 +144,10 @@ TEST(Skmerator, increasing_minimizer)
     uint64_t nb_skmer {0};
     for ([[maybe_unused]]km::Skmer<kuint> skmer : skmerator)
     {
+        ASSERT_TRUE(nb_skmer < 2);
+
         pp << skmer;
-        // cout << pp << endl;
+        cout << pp << endl;
 
         //                            Less significant             Most significant
         const kpair expected_pair{expected_values[nb_skmer][1], expected_values[nb_skmer][0]};
