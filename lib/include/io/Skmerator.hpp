@@ -195,6 +195,7 @@ public:
                 // -- Save the skmer to eventually yield
                 m_rator.m_yielded_skmer = m_skmer_buffer_array[(m_ptr_current + 1) % m_buffer_size];
                 std::cout << "current position: " << (m_ptr_current+1) << " (" << ((m_ptr_current + 1) % m_buffer_size) << ")" << std::endl;
+
                 
                 // -- On out of context minimizer
                 if (m_ptr_current - m_ptr_min >= k - m)
@@ -225,35 +226,7 @@ public:
 
                 // -- A new minimizer has been discovered
                 if (candidate_minimizer < m_current_minimizer) {
-                    // 1 - Left of the new skmer
-                    update_skmer_left_size(candidate, candidate_orient, k - m);
-
-                    // 2 - define the suffix of the previous skmer that was including the minimizer
-                    Skmer<kuint>& mini_skmer {m_skmer_buffer_array[m_ptr_min % m_buffer_size]};
-                    auto const mini_orient {m_skmer_orientation[m_ptr_min % m_buffer_size]};
-                    update_skmer_right_size(mini_skmer, mini_orient, m_ptr_current - m_ptr_min - 1);
-
-                    // 3 - Limit the suffixes of the previous skmers
-                    for (uint64_t idx{0} ; idx < (k - m) ; idx++)
-                    {
-                        auto const pred_buff_idx {(m_ptr_current - (k - m) + idx) % m_buffer_size};
-                        Skmer<kuint>& predecessor {m_skmer_buffer_array[pred_buff_idx]};
-                        auto const pred_orient {m_skmer_orientation[m_ptr_min % m_buffer_size]};
-                        // Mask the nucleotides from the predecessor that are part of this skmer.
-                        auto const right_size {get_skmer_right_size(predecessor, pred_orient)};
-                        update_skmer_right_size(predecessor, pred_orient, std::min(right_size
-                                                          , static_cast<uint16_t>(k - m - idx - 1)));
-                        
-                        // If end of the sequence
-                        int64_t const remaining_prev {m_remaining_nucleotides + static_cast<int64_t>(k - m - idx)};
-                        if (remaining_prev < 0)
-                            update_skmer_right_size(predecessor, pred_orient, std::min(right_size
-                                                          , static_cast<uint16_t>(k - m + remaining_prev)));
-                    }
-                    
-                    // 4 - save the new current minimal skmer and minimizer
-                    m_ptr_min = m_ptr_current;
-                    m_current_minimizer = candidate_minimizer;
+                    this->new_minimizer(candidate, c);
                 }
 
                 // The candidate minimizer is the same than the previous minimizer
@@ -261,11 +234,12 @@ public:
                 {
                     this->update_on_equal_mini(m_ptr_current);
                 }
-                // Correction of the left size for the beginning of the sequence
-                if (m_ptr_current < 2 * k - m - 1)
+
+                // The candidate is not a minimizer regarding the ongoing one.
+                else
                 {
-                    uint16_t max_size {static_cast<uint16_t>(m_ptr_current - (k - 1))};
-                    update_skmer_left_size(candidate, candidate_orient, std::min(candidate.m_pref_size, max_size));
+                    auto const dist_to_min {m_ptr_current - m_ptr_min};
+                    update_skmer_left_size(candidate, candidate_orient, dist_to_min-1);
                 }
 
                 // -- Yield if needed
@@ -288,6 +262,44 @@ public:
             return this->operator++();
         }
 
+        void new_minimizer()
+        {
+            bool const out_of_sequence {m_remaining_nucleotides < 0};
+
+            // 1 - Set the left part to max size. Preset the right part to max size. Can be shortened later.
+            update_skmer_left_size(candidate, candidate_orient, k - m);
+            // Preset the right part of the skmer as it was maximal
+            update_skmer_right_size(candidate, candidate_orient, out_of_sequence ? k-m+m_remaining_nucleotides : k-m);
+
+            // 2 - define the size on the right of the previous skmer that was including the minimizer
+            Skmer<kuint>& mini_skmer {m_skmer_buffer_array[m_ptr_min % m_buffer_size]};
+            auto const mini_orient {m_skmer_orientation[m_ptr_min % m_buffer_size]};
+            // Shorten the previous skmer to the right right size
+            update_skmer_right_size(mini_skmer, mini_orient, m_ptr_current - m_ptr_min - 1);
+
+            // 3 - Limit the size on the right of the previous skmers
+            for (uint64_t idx{0} ; idx < (k - m) ; idx++)
+            {
+                auto const pred_buff_idx {(m_ptr_current - (k - m) + idx) % m_buffer_size};
+                Skmer<kuint>& predecessor {m_skmer_buffer_array[pred_buff_idx]};
+                auto const pred_orient {m_skmer_orientation[m_ptr_min % m_buffer_size]};
+                // Mask the nucleotides from the predecessor that are part of this skmer.
+                auto const right_size {get_skmer_right_size(predecessor, pred_orient)};
+                update_skmer_right_size(predecessor, pred_orient, std::min(right_size
+                                                  , static_cast<uint16_t>(k - m - idx - 1)));
+                
+                // If end of the sequence
+                int64_t const remaining_prev {m_remaining_nucleotides + static_cast<int64_t>(k - m - idx)};
+                if (remaining_prev < 0)
+                    update_skmer_right_size(predecessor, pred_orient, std::min(right_size
+                                                  , static_cast<uint16_t>(k - m + remaining_prev)));
+            }
+            
+            // 4 - save the new current minimal skmer and minimizer
+            m_ptr_min = m_ptr_current;
+            m_current_minimizer = candidate_minimizer;
+        }
+
 
         Skmer<kuint>& compute_new_candidate_skmer()
         {
@@ -300,13 +312,28 @@ public:
             
             m_skmer_buffer_array[ m_ptr_current % m_buffer_size ] = (m_remaining_nucleotides >= 0) ? m_manip.add_nucleotide(nucl) : m_manip.add_empty_nucleotide();
             m_skmer_orientation[ m_ptr_current % m_buffer_size ] = m_manip.is_forward();
-            //m_manip.add_nucleotide(nucl);
-            return m_skmer_buffer_array[ m_ptr_current % m_buffer_size ];
+
+            Skmer<kuint> const & skmer = m_skmer_buffer_array[ m_ptr_current % m_buffer_size ];
+            orientation_t const orient = m_skmer_orientation[ m_ptr_current % m_buffer_size ];
+            
+            // Sequence left extremity limitation
+            if (sequence.length() - m_remaining_nucleotides >= k - m)
+                update_skmer_left_size(skmer, orient, k-m);
+            else
+                update_skmer_left_size(skmer, orient, sequence.length() - m_remaining_nucleotides);
+
+            // Sequence right extremity limitation
+            if (m_remaining_nucleotides >= 0)
+                update_skmer_right_size(skmer, orient, k-m);
+            else
+                update_skmer_right_size(skmer, orient, k-m+m_remaining_nucleotides);
+
+            return skmer;
         }
 
         void update_on_equal_mini(uint64_t ptr_equivalent)
         {
-            // cout << "update_on_equal_mini" << endl;
+            cout << "update_on_equal_mini" << endl;
             const uint64_t k{m_manip.k};
             const uint64_t m{m_manip.m};
 
@@ -325,18 +352,23 @@ public:
             // Updated to accomodate with revcompl
             uint64_t first_kmer_in_new_skmer {0};
 
+            cout << "prev " << prev_skmer << endl;
+            cout << "curr " << current_skmer << endl;
+
             // 1 - Scan all the kmer shared between the 2 skmers to decide where is the limit between the 2 skmers
             for ( ; first_kmer_in_new_skmer < k - m - pos_diff ; first_kmer_in_new_skmer++)
             {  
 
                 uint64_t const prev_skmer_km_pos {prev_orient == forward_c
-                                                        ? first_kmer_in_new_skmer - pos_diff
-                                                        : k - m - first_kmer_in_new_skmer - pos_diff
+                                                        ? first_kmer_in_new_skmer + pos_diff
+                                                        : k - m - pos_diff - first_kmer_in_new_skmer
                                                  };
+                cout << "k-m: " << (k - m) << " kmer_pos: " << first_kmer_in_new_skmer << " pos_diff: " << pos_diff << endl;
                 uint64_t const curr_skmer_km_pos {curr_orient == forward_c
                                                         ? first_kmer_in_new_skmer
                                                         : k - m - first_kmer_in_new_skmer
                                                  };
+                cout << "prev_skmer_km_pos " << prev_skmer_km_pos << " curr_skmer_km_pos " << curr_skmer_km_pos << endl;
 
                 if (m_manip.kmer_lt_kmer(current_skmer, curr_skmer_km_pos, prev_skmer, prev_skmer_km_pos))
                     break;
@@ -344,6 +376,8 @@ public:
 
 
             const uint64_t nb_kmers_in_prev {first_kmer_in_new_skmer};
+            cout << "first_kmer_in_new_skmer " << first_kmer_in_new_skmer << endl;
+            exit(1);
 
             // 3 - Update suffix (prefix if revcomp) of the previous skmer and prefix of the new skmer
             
@@ -363,7 +397,7 @@ public:
             }
 
             m_ptr_min = ptr_equivalent;
-            // cout << "/update_on_equal_mini" << endl << endl;
+            cout << "/update_on_equal_mini" << endl << endl;
         }
 
         /** Compute the dominant minimizer in the slice of the buffer. If multiple identical minimizers are present
