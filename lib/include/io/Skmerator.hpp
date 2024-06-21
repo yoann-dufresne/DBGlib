@@ -264,18 +264,7 @@ public:
 
         void new_minimizer(Skmer<kuint>& new_skmer, const orientation_t orient, const kuint new_minimizer)
         {
-            // 1 - Set the left part to max size. Preset the right part to max size. Can be shortened later.
-            update_skmer_left_size(candidate, candidate_orient, k - m);
-            // Preset the right part of the skmer as it was maximal
-            update_skmer_right_size(candidate, candidate_orient, out_of_sequence ? k-m+m_remaining_nucleotides : k-m);
-
-            // 2 - define the size on the right of the previous skmer that was including the minimizer
-            Skmer<kuint>& mini_skmer {m_skmer_buffer_array[m_ptr_min % m_buffer_size]};
-            auto const mini_orient {m_skmer_orientation[m_ptr_min % m_buffer_size]};
-            // Shorten the previous skmer to the right right size
-            update_skmer_right_size(mini_skmer, mini_orient, m_ptr_current - m_ptr_min - 1);
-
-            // 3 - Limit the size on the right of the previous skmers
+            // Limit the size on the right of the previous skmers
             for (uint64_t idx{0} ; idx < (k - m) ; idx++)
             {
                 auto const pred_buff_idx {(m_ptr_current - (k - m) + idx) % m_buffer_size};
@@ -285,12 +274,6 @@ public:
                 auto const right_size {get_skmer_right_size(predecessor, pred_orient)};
                 update_skmer_right_size(predecessor, pred_orient, std::min(right_size
                                                   , static_cast<uint16_t>(k - m - idx - 1)));
-                
-                // If end of the sequence
-                int64_t const remaining_prev {m_remaining_nucleotides + static_cast<int64_t>(k - m - idx)};
-                if (remaining_prev < 0)
-                    update_skmer_right_size(predecessor, pred_orient, std::min(right_size
-                                                  , static_cast<uint16_t>(k - m + remaining_prev)));
             }
             
             // 4 - save the new current minimal skmer and minimizer
