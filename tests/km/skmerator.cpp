@@ -181,11 +181,16 @@ TEST(Skmerator, outofcontext_minimizer)
         // Prefix:     A   T   A        _   _   _   _          C   C   C       C   _   _   _
         // Suffix:   A   G   G        G   G   G   G          C   C   C       T   _   _   _
         ,         {0b000011101100U, 0b1111111111111111U}, {0b010101010101, 0b1001111111111111U}
+        // Prefix:     
+        // Suffix:   
+        // ,         {0b010101010101, 0b1001111111111111U}
     };
 
     uint64_t nb_skmer {0};
     for ([[maybe_unused]]km::Skmer<kuint> skmer : skmerator)
     {
+        ASSERT_TRUE(nb_skmer < 4);
+
         pp << skmer;
         cout << pp << endl;
 
