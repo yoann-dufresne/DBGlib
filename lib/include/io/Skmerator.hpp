@@ -262,10 +262,8 @@ public:
             return this->operator++();
         }
 
-        void new_minimizer()
+        void new_minimizer(Skmer<kuint>& new_skmer, const orientation_t orient, const kuint new_minimizer)
         {
-            bool const out_of_sequence {m_remaining_nucleotides < 0};
-
             // 1 - Set the left part to max size. Preset the right part to max size. Can be shortened later.
             update_skmer_left_size(candidate, candidate_orient, k - m);
             // Preset the right part of the skmer as it was maximal
