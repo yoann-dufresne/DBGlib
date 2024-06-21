@@ -548,22 +548,21 @@ public:
      **/
     bool kmer_lt_kmer(const Skmer<kuint>& first_skmer, const uint64_t first_kmer_pos, const Skmer<kuint>& second_skmer, const uint64_t second_kmer_pos) const
     {
-        // cout << "k_lt_k " << first_kmer_pos << " " << second_kmer_pos << endl;
-        // 1 - Compute the missing nucleotide leftmost position for both kmers and mask size
-        const uint64_t first_mask_size {(k-m)/2 > first_kmer_pos ? first_kmer_pos * 2 - 1 : 2 * (k - m - first_kmer_pos) };
-        const uint64_t second_mask_size {(k-m)/2 > second_kmer_pos ? second_kmer_pos * 2 - 1 : 2 * (k - m - second_kmer_pos) };
-        const uint64_t mask_size {std::max(first_mask_size, second_mask_size) * 2};
+        // 1 - Compute the shift needed to only keep informative nucleotides
+        uint64_t const first_missing_nucl {std::max(2*first_kmer_pos-1, 2*(k-m-first_kmer_pos))};
+        uint64_t const second_missing_nucl {std::max(2*second_kmer_pos-1, 2*(k-m-second_kmer_pos))};
+        uint64_t const mask_size {std::max(first_missing_nucl, second_missing_nucl)};
 
         // 2 - Compare masked kmers
         // check if first skmer shifted right of mask is < second skmer shifted right of mask 
-        const auto first_kmer {first_skmer.m_pair >> mask_size};
-        const auto second_kmer {second_skmer.m_pair >> mask_size};
+        const auto first_kmer {first_skmer.m_pair >> (2 * mask_size)};
+        const auto second_kmer {second_skmer.m_pair >> (2 * mask_size)};
         
         if (first_kmer != second_kmer){
             return first_kmer < second_kmer;}
         
         // 4 - If equals => true if second skmer is the first one to miss a nucleotide (left based)
-        return first_mask_size < second_mask_size;
+        return first_missing_nucl < second_missing_nucl;
     
     }
 
