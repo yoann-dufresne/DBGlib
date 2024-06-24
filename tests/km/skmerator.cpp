@@ -146,8 +146,8 @@ TEST(Skmerator, increasing_minimizer)
     {
         ASSERT_TRUE(nb_skmer < 2);
 
-        pp << skmer;
-        cout << pp << endl;
+        // pp << skmer;
+        // cout << pp << endl;
 
         //                            Less significant             Most significant
         const kpair expected_pair{expected_values[nb_skmer][1], expected_values[nb_skmer][0]};
@@ -170,7 +170,7 @@ TEST(Skmerator, outofcontext_minimizer)
 
     km::SkmerManipulator<kuint> manip {k, m};
     std::string seq{"AACAATAAGGGGGGG"};
-    cout << seq << endl;
+    // cout << seq << endl;
     km::SeqSkmerator<kuint> skmerator {manip, seq};
     km::SkmerPrettyPrinter<kuint> pp {k, m};
     
@@ -178,12 +178,9 @@ TEST(Skmerator, outofcontext_minimizer)
     //                         Prefix:      A   _   _        _   _   _   _          A   C   A       _   _   _   _   
     //                         Suffix:    A   C   A        A   T   A   A          A   T   A       A   G   G   G
     const kuint expected_values[][2] { {0b000001110011U, 0b0011101100110011U}, {0b000010010000U, 0b0011111111111111U}
-        // Prefix:     A   T   A        _   _   _   _          C   C   C       C   _   _   _
-        // Suffix:   A   G   G        G   G   G   G          C   C   C       T   _   _   _
-        ,         {0b000011101100U, 0b1111111111111111U}, {0b010101010101, 0b1001111111111111U}
-        // Prefix:     
-        // Suffix:   
-        // ,         {0b010101010101, 0b1001111111111111U}
+        // Prefix:     A   T   A        _   _   _   _          C   C   C       _   _   _   _
+        // Suffix:   A   G   G        G   G   G   G          C   C   C       C   T   _   _
+        ,         {0b000011101100U, 0b1111111111111111U}, {0b010101010101, 0b0111101111111111U}
     };
 
     uint64_t nb_skmer {0};
@@ -191,8 +188,8 @@ TEST(Skmerator, outofcontext_minimizer)
     {
         ASSERT_TRUE(nb_skmer < 4);
 
-        pp << skmer;
-        cout << pp << endl;
+        // pp << skmer;
+        // cout << pp << endl;
 
         //                            Less significant             Most significant
         const kpair expected_pair{expected_values[nb_skmer][1], expected_values[nb_skmer][0]};
