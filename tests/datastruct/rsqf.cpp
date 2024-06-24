@@ -318,6 +318,7 @@ TEST(RSQF_get, single_slot)
     }
 }
 
+
 TEST(RSQF_get, triple_insertion)
 {
     for (uint64_t insert_slot{62} ; insert_slot<128 ; insert_slot++)

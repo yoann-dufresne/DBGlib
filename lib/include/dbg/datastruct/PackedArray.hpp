@@ -126,4 +126,11 @@ struct PackedBlock
 	};
 };
 
+// template<typename T>
+// std::ostream& operator<<(std::ostream& os, PackedBlock<T>& kmer)
+// {
+// 	os << kmer.m_value;
+//     return os;
+// };
+
 #endif
