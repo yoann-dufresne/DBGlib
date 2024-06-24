@@ -449,7 +449,7 @@ public:
      * @param kmer_pos Position of the start of the kmer
      * @return true if the skmer has a valid kmer at the given position, false otherwise
      **/
-    bool has_valid_kmer(const Skmer<T>& skmer, const uint64_t kmer_pos){ 
+    bool has_valid_kmer(const Skmer<kuint>& skmer, const uint64_t kmer_pos){ 
         // case position < start of skmer prefix
         if (kmer_pos < (this->m_pref_size - skmer.m_pref_size)){
             return false;
