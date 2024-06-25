@@ -11,13 +11,13 @@ static constexpr uint64_t r1 {6};
 
 // class QuotientFilter<q, r, LeftQuotienting>;
 
-class QuotientFilter_6_6_Fixture : public QuotientFilter<q1, r1, LeftQuotienting>, public testing::Test
+class QuotientFilter_6_6_Fixture : public QuotientFilter<q1, r1>, public testing::Test
 {};
 
 static constexpr uint64_t q2 {8};
 static constexpr uint64_t r2 {3};
 
-class QuotientFilter_8_3_Fixture : public QuotientFilter<q2, r2, LeftQuotienting>, public testing::Test
+class QuotientFilter_8_3_Fixture : public QuotientFilter<q2, r2>, public testing::Test
 {};
 
 
@@ -33,7 +33,7 @@ TEST_F(QuotientFilter_8_3_Fixture, init)
 
 TEST(RSQF_insert, insert_free_space)
 {
-    QuotientFilter<7, 5, LeftQuotienting> filter{};
+    QuotientFilter<7, 5> filter{};
 
     // Prepare the example to insert
     const uint64_t quotient {2};
@@ -53,9 +53,9 @@ TEST(RSQF_insert, insert_free_space)
     ASSERT_EQ(filter.m_rests[block_idx].get(quotient % 64), rest);
 }
 
-TEST(RSQF_insert, insert_and_shift)
+TEST(RSQF_insert_and_shift, single_block)
 {
-    QuotientFilter<7, 5, LeftQuotienting> filter{};
+    QuotientFilter<7, 5> filter{};
 
     const uint64_t quotient {2};
     const uint64_t rest1 {0b11011};
@@ -111,9 +111,10 @@ TEST(RSQF_insert, insert_and_shift)
 }
 
 
+
 TEST(RSQF_first_unused, in_block_no_offset)
 {
-    QuotientFilter<7, 5, LeftQuotienting> filter{};
+    QuotientFilter<7, 5> filter{};
     // Filter filled at quotients 2/3/4                     qqqrrrrr
     filter.insert_in_free_space(LeftQuotienting::compute<7, 5>(0b01010001));
     filter.insert_in_free_space(LeftQuotienting::compute<7, 5>(0b01110001));
@@ -129,7 +130,7 @@ TEST(RSQF_first_unused, in_block_no_offset)
 
 TEST(RSQF_first_unused, in_block_offset)
 {
-    QuotientFilter<7, 5, LeftQuotienting> filter{};
+    QuotientFilter<7, 5> filter{};
     // Filter filled at quotients 2/3/4                     qqqrrrrr
     filter.insert_in_free_space(LeftQuotienting::compute<7, 5>(0b01010001));
     filter.insert_in_free_space(LeftQuotienting::compute<7, 5>(0b01110001));
@@ -148,7 +149,7 @@ TEST(RSQF_first_unused, in_block_offset)
 
 TEST(RSQF_first_unused, out_of_block_offset)
 {
-    QuotientFilter<7, 5, LeftQuotienting> filter{};
+    QuotientFilter<7, 5> filter{};
 
     // Faking a multiblock offset
     filter.m_offsets[0] = 70;
@@ -165,7 +166,7 @@ TEST(RSQF_first_unused, out_of_block_offset)
 
 TEST(RSQF_first_unused, out_of_block_no_offset)
 {
-    QuotientFilter<7, 5, LeftQuotienting> filter{};
+    QuotientFilter<7, 5> filter{};
 
     // Faking a long run spreading on 2 blocks
     filter.m_occupied.set(10);
@@ -182,7 +183,7 @@ TEST(RSQF_first_unused, out_of_block_no_offset)
 
 TEST(RSQF_first_unused, out_of_block_toric)
 {
-    QuotientFilter<7, 5, LeftQuotienting> filter{};
+    QuotientFilter<7, 5> filter{};
 
     // Faking a long run spreading on 2 blocks
     filter.m_occupied.set(75);
@@ -201,7 +202,7 @@ TEST(RSQF_first_unused, out_of_block_toric)
 
 TEST(RSQF_INSERT_POSITION, inside_block_insert)
 {
-    QuotientFilter<7, 5, LeftQuotienting> filter{};
+    QuotientFilter<7, 5> filter{};
     filter.m_occupied.set(10);
     filter.m_runend.set(12);
     filter.m_rests[0].set(10, 3);
@@ -226,7 +227,7 @@ TEST(RSQF_INSERT_POSITION, inside_block_insert)
 
 TEST(RSQF_INSERT_POSITION, shifted_next_block)
 {
-    QuotientFilter<7, 5, LeftQuotienting> filter{};
+    QuotientFilter<7, 5> filter{};
     filter.m_occupied.set(61);
     filter.m_runend.set(63);
     filter.m_rests[0].set(61, 3);
@@ -245,7 +246,7 @@ TEST(RSQF_INSERT_POSITION, shifted_next_block)
 
 TEST(RSQF_full_insert, single_block)
 {
-    QuotientFilter<7, 5, LeftQuotienting> filter{};
+    QuotientFilter<7, 5> filter{};
 
     for (uint64_t i{3} ; i<=7 ; i+=2)
     {
@@ -263,7 +264,7 @@ TEST(RSQF_full_insert, single_block)
 
 TEST(RSQF_full_insert, block_overflow)
 {
-    QuotientFilter<7, 5, LeftQuotienting> filter{};
+    QuotientFilter<7, 5> filter{};
 
     for (uint64_t i{3} ; i<=7 ; i+=2)
     {
@@ -276,12 +277,14 @@ TEST(RSQF_full_insert, block_overflow)
     ASSERT_EQ(filter.m_rests[0].get(63), 5);
     ASSERT_EQ(filter.m_rests[1].get(0), 7);
     ASSERT_EQ(filter.m_rests[1].get(1), 0);
+
+    ASSERT_EQ(filter.m_offsets[1], 1);
 }
 
 
 TEST(RSQF_full_insert, toric)
 {
-    QuotientFilter<7, 5, LeftQuotienting> filter{};
+    QuotientFilter<7, 5> filter{};
 
     for (uint64_t i{3} ; i<=7 ; i+=2)
     {
@@ -294,6 +297,8 @@ TEST(RSQF_full_insert, toric)
     ASSERT_EQ(filter.m_rests[0].get(0), 5);
     ASSERT_EQ(filter.m_rests[0].get(1), 7);
     ASSERT_EQ(filter.m_rests[0].get(2), 0);
+    
+    ASSERT_EQ(filter.m_offsets[0], 2);
 }
 
 
@@ -301,7 +306,7 @@ TEST(RSQF_get, single_slot)
 {
     for (uint64_t insert_slot{0} ; insert_slot<128 ; insert_slot++)
     {
-        QuotientFilter<7, 5, LeftQuotienting> filter{};
+        QuotientFilter<7, 5> filter{};
         const uint64_t insert_value{(insert_slot << 5) | 0b10001};
         filter.insert(insert_value);
 
@@ -313,22 +318,93 @@ TEST(RSQF_get, single_slot)
     }
 }
 
-// TEST(RSQF_get, triple_insertion)
-// {
-//     for (uint64_t insert_slot{0} ; insert_slot<128 ; insert_slot++)
-//     {
-//         // cout << "insert_slot " << insert_slot << endl;
-//         QuotientFilter<7, 5, LeftQuotienting> filter{};
-//         for (uint64_t i{1} ; i<=3 ; i++)
-//         {
-//             const uint64_t insert_value{(insert_slot << 5) | 0b10000 | i};
-//             filter.insert(insert_value);
-//         }
 
-//         for(uint64_t query_slot{0} ; query_slot<128 ; query_slot++)
-//         {
-//             const uint64_t query_value{(query_slot << 5) | 0b10010};
-//             ASSERT_EQ(filter.get(query_value), query_slot == insert_slot);
-//         }
-//     }
-// }
+TEST(RSQF_get, triple_insertion)
+{
+    for (uint64_t insert_slot{62} ; insert_slot<128 ; insert_slot++)
+    {
+        QuotientFilter<7, 5> filter{};
+        for (uint64_t i{1} ; i<=3 ; i++)
+        {
+            const uint64_t insert_value{(insert_slot << 5) | 0b10000 | i};
+            filter.insert(insert_value);
+        }
+
+        for(uint64_t query_slot{62} ; query_slot<65 ; query_slot++)
+        {
+            const uint64_t query_value{(query_slot << 5) | 0b10010};
+            ASSERT_EQ(filter.get(query_value), query_slot == insert_slot);
+        }
+    }
+}
+
+TEST(RSQF_resize, resize_split_runs)
+{
+    QuotientFilter<7, 5> filter{};
+
+    uint64_t values[] {
+        // Run in block 0
+        (2UL << 5) | 0b00101, (2UL << 5) | 0b10101,
+        // Run in block 1
+        (73UL << 5) | 0b00001, (73UL << 5) | 0b10100
+    };
+
+    for (uint64_t i{0} ; i<4 ; i++)
+        filter.insert(values[i]);
+
+    QuotientFilter<8, 4> resized{filter};
+
+    ASSERT_EQ(filter.size(), resized.size());
+
+    for (uint64_t i{0} ; i<4 ; i++)
+    {
+        ASSERT_EQ(resized.get(values[i]), true);
+    }
+}
+
+TEST(RSQF_resize, resize_same_run)
+{
+    QuotientFilter<7, 5> filter{};
+
+    uint64_t values[] {
+        // Run in block 0
+        (2UL << 5) | 0b00101, (2UL << 5) | 0b01101,
+        (2UL << 5) | 0b00001, (2UL << 5) | 0b00100
+    };
+
+    for (uint64_t i{0} ; i<4 ; i++)
+        filter.insert(values[i]);
+
+    QuotientFilter<8, 4> resized{filter};
+
+    ASSERT_EQ(filter.size(), resized.size());
+
+    for (uint64_t i{0} ; i<4 ; i++)
+    {
+        ASSERT_EQ(resized.get(values[i]), true);
+    }
+}
+
+TEST(RSQF_resize, resize_overflow)
+{
+    QuotientFilter<7, 5> filter{};
+
+    uint64_t values[] {
+        (127UL << 5) | 0b00101, // slot 127          then 254
+        (127UL << 5) | 0b11101, // slot 127 overflow then 255
+        (127UL << 5) | 0b10001  // slot 127 overflow then 255 overflow
+    };
+
+    for (uint64_t i{0} ; i<3 ; i++)
+        filter.insert(values[i]);
+
+    QuotientFilter<8, 4> resized{filter};
+
+    ASSERT_EQ(filter.size(), resized.size());
+
+    for (uint64_t i{0} ; i<3 ; i++)
+    {
+        ASSERT_EQ(resized.get(values[i]), true);
+    }
+}
+

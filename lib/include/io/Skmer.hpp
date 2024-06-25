@@ -184,7 +184,7 @@ public:
             return *this;
         }
 
-        pair operator& (const uint64_t value)
+        pair operator& (const uint64_t value) const
         {
             pair p{*this};
             p.m_value[0] &= value;
@@ -197,6 +197,14 @@ public:
             pair p{*this};
             p.m_value[0] |= other.m_value[0];
             p.m_value[1] |= other.m_value[1];
+            return p;
+        }
+
+        pair operator^ (const pair& other) const
+        {
+            pair p{*this};
+            p.m_value[0] ^= other.m_value[0];
+            p.m_value[1] ^= other.m_value[1];
             return p;
         }
 
@@ -244,7 +252,7 @@ template<typename kuint>
 class SkmerPrettyPrinter
 {
 public:
-    Skmer<kuint>* m_skmer;
+    Skmer<kuint> m_skmer;
     uint64_t k;
     uint64_t m;
     uint64_t sk_size;
@@ -255,7 +263,7 @@ public:
                     , sk_size(2*k-m), m_suff_size(sk_size / 2), m_pref_size((sk_size+1) / 2)
     {};
 
-    SkmerPrettyPrinter& operator<< (Skmer<kuint>* skmer)
+    SkmerPrettyPrinter& operator<< (Skmer<kuint> const skmer)
     {
         m_skmer = skmer;
         return *this;
@@ -266,19 +274,21 @@ public:
 template<typename kuint>
 std::ostream& operator<<(std::ostream& os, const SkmerPrettyPrinter<kuint> pp)
 {
+    const uint64_t k {pp.k};
+    const uint64_t m {pp.m};
     static const char nucleotides[] = {'A', 'C', 'T', 'G'};
     os << "[skmer not interleaved: ";
 
     // Forward prefix
-    for (uint64_t pref_idx{0} ; pref_idx<pp.m_pref_size ; pref_idx++)
+    for (uint64_t pref_idx{k-m-pp.m_skmer.m_pref_size} ; pref_idx<pp.m_pref_size ; pref_idx++)
     {
-        os << nucleotides[((*pp.m_skmer).m_pair >> (4 * pref_idx)) & 0b11UL];
+        os << nucleotides[((pp.m_skmer).m_pair >> (4 * pref_idx)) & 0b11UL];
     }
     os << " ";
     // Forward suffix
-    for (uint64_t suf_idx{pp.m_suff_size} ; suf_idx>0 ; suf_idx--)
+    for (uint64_t suf_idx{pp.m_suff_size} ; suf_idx>(k-m-pp.m_skmer.m_suff_size) ; suf_idx--)
     {
-        os << nucleotides[((*pp.m_skmer).m_pair >> (4 * suf_idx - 2)) & 0b11UL];
+        os << nucleotides[((pp.m_skmer).m_pair >> (4 * suf_idx - 2)) & 0b11UL];
     }
 
     os << "]";
@@ -286,7 +296,9 @@ std::ostream& operator<<(std::ostream& os, const SkmerPrettyPrinter<kuint> pp)
     return os;
 }
 
-
+using orientation_t = bool;
+const bool forward_c {true};
+const bool reverse_c {false};
 
 template<typename kuint>
 class SkmerManipulator
@@ -304,6 +316,7 @@ public:
 protected:
     uint64_t m_suff_size;
     uint64_t m_pref_size;
+    bool m_current_orientation;
 
     Skmer<kuint>::pair m_fwd_suffix_buff;
     Skmer<kuint>::pair m_fwd_prefix_buff;
@@ -313,19 +326,49 @@ protected:
     const Skmer<kuint>::pair max_pair_value;
     const kpair m_mask;
 
+    kpair m_minimizer_mask;
+    kpair* m_pref_masks;
+    kpair* m_suff_masks;
+
     // // The amount of bit shifts needed to reach the 4 most significant bits of a kuint
     // static constexpr uint64_t uints_middle_shift {sizeof(kuint) * 8 - 4};
 
 public:
     SkmerManipulator(const uint64_t k, const uint64_t m) 
         : k(k), m(m), sk_size(2*k-m), m_suff_size(sk_size / 2), m_pref_size((sk_size+1) / 2)
+        , m_current_orientation(forward_c)
         , max_pair_value(static_cast<kuint>(~static_cast<kuint>(0)), static_cast<kuint>(~static_cast<kuint>(0)))
         , m_mask( max_pair_value >> (2 * sizeof(kuint) * 8 - 2 * sk_size) )
     {
         assert((k*2-m+3) / 4 <= 2*sizeof(kuint));
 
+        // Compute all the possible prefix/suffix masks
+        m_pref_masks = new kpair[k-m+1];
+        m_suff_masks = new kpair[k-m+1];
+
+        for (uint64_t i{1} ; i<=k-m ; i++)
+        {
+            // Prefix mask
+            static const kpair pref_seed {static_cast<kuint>(0b0011)};
+            m_pref_masks[i] = m_pref_masks[i-1] | (pref_seed << (4 * (k - m - i)));
+
+            // Suffix mask
+            static const kpair suff_seed {static_cast<kuint>(0b1100)};
+            m_suff_masks[i] = m_suff_masks[i-1] | (suff_seed << (4 * (k - m - i)));
+        }
+
+        // Minimizer mask
+        kpair sub_maks = max_pair_value >> (2 * sizeof(kuint) * 8 - 4 * (k - m));
+        m_minimizer_mask = m_mask ^ sub_maks;
+
         // Skmer and skmer buffers init
         this->init_skmer();
+    }
+
+    ~SkmerManipulator()
+    {
+        delete[] m_pref_masks;
+        delete[] m_suff_masks;
     }
 
     void init_skmer()
@@ -339,6 +382,22 @@ public:
         // Skmers
         m_fwd = Skmer<kuint>{};
         m_rev = Skmer<kuint>{};
+    }
+
+    bool skmer_equals(const km::Skmer<kuint>& left, const km::Skmer<kuint>& right)
+    {
+        if ((left.m_pref_size != right.m_pref_size) or (left.m_suff_size != right.m_suff_size))
+            return false;
+
+        kpair& pref_mask = m_pref_masks[left.m_pref_size];
+        kpair& suff_mask = m_suff_masks[left.m_suff_size];
+        kpair pair_mask {pref_mask | m_minimizer_mask | suff_mask};
+
+        kpair left_masked {left.m_pair & pair_mask};
+        kpair right_masked {right.m_pair & pair_mask};
+
+        return left_masked == right_masked;
+        // return false;
     }
 
     /** Add a binarized nucleotide (2bits) to the current skmer.
@@ -375,7 +434,8 @@ public:
         // Shift the prefix
         m_rev_prefix_buff <<= 4;
         // Add the new complement nucleotide
-        const auto compl_nucl {static_cast<kuint>((nucl + 2) % 4)};
+        const kuint compl_nucl{ static_cast<kuint>((nucl + 2) % 4)};
+
         m_rev_prefix_buff |= compl_nucl;
         // Remove the transfered nucleotide
         m_rev_prefix_buff &= m_mask;
@@ -383,11 +443,74 @@ public:
         // --- Merge the interleaved halves ---
         m_fwd = m_fwd_prefix_buff | m_fwd_suffix_buff;
         m_rev = m_rev_prefix_buff | m_rev_suffix_buff;
-        
+
         if (m_rev < m_fwd)
+        {
+            m_current_orientation = reverse_c;
             return m_rev;
+        }
         else
+        {
+            m_current_orientation = forward_c;
             return m_fwd;
+        }
+    }
+
+    inline Skmer<kuint>& add_empty_nucleotide()
+    {
+        // empty nucleotide
+        const kuint nucl = 0b11U;
+        // --- forward prefix ---
+        // Shift prefix to the right
+        m_fwd_prefix_buff >>= 4;
+        // Get nucleotide that move from suffix to prefix
+        const auto fwd_central_nucl {m_fwd_suffix_buff >> (m_suff_size * 4 - 2)};
+        // Include the nucleotide in the prefix
+        m_fwd_prefix_buff |= fwd_central_nucl << ((m_pref_size-1) * 4);
+
+        // --- reverse suffix ---
+        // Shift the suffix to the right
+        m_rev_suffix_buff >>= 4;
+        // Get the nucleotide to transfer from the prefix to suffix
+        const auto rev_central_nucl {m_rev_prefix_buff >> ((m_pref_size - 1) * 4)};
+        // Include the transfered nucleotide
+        m_rev_suffix_buff |= rev_central_nucl << (m_suff_size * 4 - 2);
+
+        // --- forward suffix ---
+        // Shift the suffix
+        m_fwd_suffix_buff <<= 4;
+        // Add the new nucleotide
+        m_fwd_suffix_buff |= nucl << 2;
+        // Remove the transfered nucleotide
+        m_fwd_suffix_buff &= m_mask;
+
+        // --- reverse prefix ---
+        // Shift the prefix
+        m_rev_prefix_buff <<= 4;
+        // Add the new empty nucleotide
+        m_rev_prefix_buff |= nucl;
+        // Remove the transfered nucleotide
+        m_rev_prefix_buff &= m_mask;
+
+        // --- Merge the interleaved halves ---
+        m_fwd = m_fwd_prefix_buff | m_fwd_suffix_buff;
+        m_rev = m_rev_prefix_buff | m_rev_suffix_buff;
+
+        if (m_rev < m_fwd)
+        {
+            m_current_orientation = reverse_c;
+            return m_rev;
+        }
+        else 
+        {
+            m_current_orientation = forward_c;
+            return m_fwd;
+        }
+    }
+
+    bool is_forward() const
+    {
+        return m_current_orientation;
     }
 
     kuint minimizer() const
@@ -425,22 +548,21 @@ public:
      **/
     bool kmer_lt_kmer(const Skmer<kuint>& first_skmer, const uint64_t first_kmer_pos, const Skmer<kuint>& second_skmer, const uint64_t second_kmer_pos) const
     {
-        // cout << "k_lt_k " << first_kmer_pos << " " << second_kmer_pos << endl;
-        // 1 - Compute the missing nucleotide leftmost position for both kmers and mask size
-        const uint64_t first_mask_size {(k-m)/2 > first_kmer_pos ? first_kmer_pos * 2 - 1 : 2 * (k - m - first_kmer_pos) };
-        const uint64_t second_mask_size {(k-m)/2 > second_kmer_pos ? second_kmer_pos * 2 - 1 : 2 * (k - m - second_kmer_pos) };
-        const uint64_t mask_size {std::max(first_mask_size, second_mask_size) * 2};
-        
-        // 2 - Compare masked kmers
-        // check if first skmer shifted right of mask is < second skmer shifted right of mask  
-        const auto first_kmer {first_skmer.m_pair >> mask_size};
-        const auto second_kmer {second_skmer.m_pair >> mask_size};  
+        // 1 - Compute the shift needed to only keep informative nucleotides
+        uint64_t const first_missing_nucl {std::max(2*first_kmer_pos-1, 2*(k-m-first_kmer_pos))};
+        uint64_t const second_missing_nucl {std::max(2*second_kmer_pos-1, 2*(k-m-second_kmer_pos))};
+        uint64_t const mask_size {std::max(first_missing_nucl, second_missing_nucl)};
 
-        if (first_kmer != second_kmer) 
-            return first_kmer < second_kmer;        
+        // 2 - Compare masked kmers
+        // check if first skmer shifted right of mask is < second skmer shifted right of mask 
+        const auto first_kmer {first_skmer.m_pair >> (2 * mask_size)};
+        const auto second_kmer {second_skmer.m_pair >> (2 * mask_size)};
+        
+        if (first_kmer != second_kmer){
+            return first_kmer < second_kmer;}
         
         // 4 - If equals => true if second skmer is the first one to miss a nucleotide (left based)
-        return first_mask_size < second_mask_size;
+        return first_missing_nucl < second_missing_nucl;
     
     }
 
