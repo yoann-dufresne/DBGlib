@@ -72,19 +72,12 @@ public:
         // uint 0 is the less significant
         kuint m_value[2];
 
-        pair() : m_value(0, 0)
-        {}
-        pair(kuint& single) : m_value(single, 0)
-        {}
-        pair(kuint single) : m_value(single, 0)
-        {}
-        pair(const kuint* values) :  m_value(values[1], values[0])
-        {}
-        pair(const kuint& less_significant, const kuint& most_significant) : m_value(less_significant, most_significant)
-        {}
-        pair(const pair& other) : m_value(other.m_value[0], other.m_value[1])
-        {}
-
+        pair() : m_value(0, 0){}
+        pair(kuint& single) : m_value(single, 0){}
+        pair(kuint single) : m_value(single, 0){}
+        pair(const kuint* values) : m_value(values[1], values[0]){}
+        pair(const kuint& less_significant, const kuint& most_significant) : m_value(less_significant, most_significant){}
+        pair(const pair& other) : m_value(other.m_value[0], other.m_value[1]){}
 
         pair& operator= (const pair& other)
         {
