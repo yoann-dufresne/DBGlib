@@ -105,8 +105,8 @@ TEST(SkmerSorting, Three_kmer_sorting)
             std:: cout << pp;
         }
         
-        for(auto & positon: ordered_kmers){
-            km::Skmer<kuint> const & curr_skmer { permuted[position] };
+        for(auto & skmer_position: ordered_kmers){
+            km::Skmer<kuint> const & curr_skmer { permuted[skmer_position] };
             kpair const & expected_value {kmer_triplet[loop_idx]};
             ASSERT_EQ(curr_skmer.m_pair,expected_value);
 

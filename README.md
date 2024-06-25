@@ -12,7 +12,7 @@
 * Run all tests
 ```bash
 	mkdir -p build && cd build
-	cmake -DCMAKE_BUILD_TYPE=DEBUG .. && make && ./tests/dbglib-tests
+	cmake -DCMAKE_BUILD_TYPE=DEBUG .. && make -j && ./tests/dbglib-tests
 ```
 
 * Run a subset of tests

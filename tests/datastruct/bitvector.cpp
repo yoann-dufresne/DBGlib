@@ -91,7 +91,7 @@ TEST(bitvector, unset_set_full)
 TEST(bitvector, get_1bit)
 {
     Bitvector<128> bv{};
-    uint64_t set_value;
+    uint64_t set_value {0};
 
     // --- Set the bitvector bit by bit and test it ---
 

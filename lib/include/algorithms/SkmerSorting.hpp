@@ -67,11 +67,11 @@ namespace km
      * @param right_column second column (contigous)
      * @return a vector of pairs of candidate overlaps between the two columns
      **/
-    template<class It, typename kuint>
-    std::vector<std::pair<uint64_t, uint64_t> >  get_candidate_overlaps(std::vector<uint64_t> left_column, std::vector<uint64_t> right_column)
-    {
+    // template<class It, typename kuint>
+    // std::vector<std::pair<uint64_t, uint64_t> >  get_candidate_overlaps(std::vector<uint64_t> left_column, std::vector<uint64_t> right_column)
+    // {
         
-    }
+    // }
 
 
     template <class It, typename kuint>
