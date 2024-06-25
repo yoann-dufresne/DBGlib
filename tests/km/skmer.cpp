@@ -58,7 +58,10 @@ TEST(SkmerManipulator, enumerate_kmer_full)
         const kpair expected_rev_pair{expected_rev_values[idx][1], expected_rev_values[idx][0]};
         ASSERT_EQ(manip.m_rev.m_pair, expected_rev_pair);
 
-        EXPECT_EQ(min_skmer.m_pair, std::min(km::Skmer<kuint>::pair(expected_fwd_values[idx]), km::Skmer<kuint>::pair(expected_rev_values[idx])));
+        // cout << "PAIR " << km::Skmer<kuint>::pair(expected_fwd_values[idx]) << endl;
+        EXPECT_EQ(min_skmer.m_pair, std::min(
+                    km::Skmer<kuint>::pair(expected_fwd_values[idx][1], expected_fwd_values[idx][0]), 
+                    km::Skmer<kuint>::pair(expected_rev_values[idx][1], expected_rev_values[idx][0])));
 
         idx += 1;
     }
