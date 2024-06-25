@@ -444,6 +444,34 @@ public:
     
     }
 
+    /** Checks if 2 kmers in two skmers are overlapping
+     * @param first_skmer First kmer is included in this skmer
+     * @param first_kmer_pos Position of the fist kmer in the first skmer. 0 is the kmer that contains the whole prefix.
+     * @param second_skmer Second kmer is included in this skmer
+     * @param secpmd_kmer_pos Position of the second kmer in the second skmer. 0 is the kmer that contains the whole prefix.
+     * @return true if the first kmer overlaps with the second kmer
+     **/
+    bool kmer_ovl_kmer(const Skmer<kuint>& first_skmer, const uint64_t first_kmer_pos, const Skmer<kuint>& second_skmer, const uint64_t second_kmer_pos) const
+    {
+        // cout << "k_lt_k " << first_kmer_pos << " " << second_kmer_pos << endl;
+        // 1 - Compute the missing nucleotide leftmost position for both kmers and mask size
+        const uint64_t first_mask_size {(k-m)/2 > first_kmer_pos ? first_kmer_pos * 2 - 1 : 2 * (k - m - first_kmer_pos) };
+        const uint64_t second_mask_size {(k-m)/2 > second_kmer_pos ? second_kmer_pos * 2 - 1 : 2 * (k - m - second_kmer_pos) };
+        const uint64_t mask_size {std::max(first_mask_size, second_mask_size) * 2};
+        
+        // 2 - Compare masked kmers
+        // check if first skmer shifted right of mask is < second skmer shifted right of mask  
+        const auto first_kmer {first_skmer.m_pair >> mask_size};
+        const auto second_kmer {second_skmer.m_pair >> mask_size};  
+
+        if (first_kmer != second_kmer) 
+            return first_kmer < second_kmer;        
+        
+        // 4 - If equals => true if second skmer is the first one to miss a nucleotide (left based)
+        return first_mask_size < second_mask_size;
+    
+    }
+
     /** Compare 2 kmers included in 2 skmers.
      * @param skmer The skmer you want to evaluate having a kmer at the given position
      * @param kmer_pos Position of the start of the kmer
